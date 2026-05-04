@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Science Bowl — Biology Practice</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- ============ Setup Screen ============ -->
+    <section id="setup" class="screen active">
+      <header class="setup-header">
+        <button id="setup-dashboard-btn" class="ghost dashboard-button" type="button">📊 View Progress Dashboard</button>
+        <h1>National Science Bowl</h1>
+        <h2>Biology Practice — Campbell Ch. 1–2</h2>
+      </header>
+
+      <div class="mode-selector">
+        <button class="mode-card" data-mode="two-team" id="mode-two-team">
+          <div class="mode-icon">⚔️</div>
+          <div class="mode-title">Two Teams</div>
+          <div class="mode-desc">Buzzer face-off. NSB toss-up + bonus format. Moderator reads questions.</div>
+        </button>
+        <button class="mode-card" data-mode="solo" id="mode-solo">
+          <div class="mode-icon">🎯</div>
+          <div class="mode-title">Solo Practice</div>
+          <div class="mode-desc">One player vs. the clock. Build accuracy across 25 toss-up + bonus pairs.</div>
+        </button>
+      </div>
+
+      <!-- Two-Team setup -->
+      <div class="setup-form hidden" id="setup-two-team">
+        <h3>Team Setup</h3>
+        <label>
+          Team 1 name
+          <input type="text" id="team1-name" value="Team 1" maxlength="20" />
+        </label>
+        <label>
+          Team 2 name
+          <input type="text" id="team2-name" value="Team 2" maxlength="20" />
+        </label>
+        <p class="hint">Buzzer keys: <kbd>A</kbd> = Team 1, <kbd>L</kbd> = Team 2</p>
+      </div>
+
+      <!-- Solo setup -->
+      <div class="setup-form hidden" id="setup-solo">
+        <h3>Solo Setup</h3>
+        <label>
+          Your name
+          <input type="text" id="solo-name" value="Player" maxlength="20" />
+        </label>
+        <p class="hint">Press <kbd>Space</kbd> when ready to answer · <kbd>Enter</kbd> to submit a typed answer</p>
+      </div>
+
+      <!-- Match options (shared) -->
+      <div class="match-options hidden" id="match-options">
+        <h3>Match options</h3>
+        <div class="match-options-grid">
+          <label class="field">
+            <span>Question pool</span>
+            <select id="match-source">
+              <option value="all" selected>All available (seed + DOE corpus)</option>
+              <option value="seed">Seed only (25 hand-curated)</option>
+              <option value="corpus">DOE NSB corpus only (real competition Qs)</option>
+            </select>
+            <small id="match-source-info">~133 concepts available</small>
+          </label>
+          <label class="field">
+            <span>Match length</span>
+            <select id="match-length">
+              <option value="5">5 rounds (quick drill)</option>
+              <option value="10">10 rounds</option>
+              <option value="15">15 rounds</option>
+              <option value="25" selected>25 rounds (full match)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Topic filter</span>
+            <select id="match-topic">
+              <option value="all" selected>All topics</option>
+              <option value="ch1">Campbell Ch 1 only (themes, evolution, inquiry)</option>
+              <option value="ch2">Campbell Ch 2 only (atoms, bonding)</option>
+              <option value="doe-corpus">DOE corpus only</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Past year (DOE corpus)</span>
+            <select id="match-year">
+              <option value="all" selected>All years</option>
+            </select>
+            <small id="match-year-info">Pulled from <a href="https://science.osti.gov/wdts/nsb/Regional-Competitions/Resources/MS-Sample-Questions" target="_blank" rel="noreferrer noopener">DOE NSB MS sample bank</a>.</small>
+          </label>
+        </div>
+      </div>
+
+      <!-- Agent toggle (shared) -->
+      <div class="agent-toggle hidden" id="agent-toggle">
+        <h3>Agentic Moderator</h3>
+        <label class="toggle">
+          <input type="checkbox" id="agent-enable" />
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">
+            <strong>Enable AI moderator</strong>
+            <small>Reads questions aloud and listens for your spoken answers. Falls back to manual control if your browser doesn't support speech APIs.</small>
+          </span>
+        </label>
+        <div id="agent-support" class="support-line"></div>
+
+        <div id="agent-voice-controls" class="voice-controls hidden">
+          <div class="voice-grid">
+            <label class="field">
+              <span>Voice</span>
+              <select id="agent-voice"></select>
+              <small id="agent-voice-info"></small>
+            </label>
+            <label class="field">
+              <span>Speed: <strong id="agent-rate-value">0.80×</strong></span>
+              <input type="range" id="agent-rate" min="0.5" max="1.2" step="0.05" value="0.8" />
+              <small>Lower = clearer / slower. NSB-style is around 0.85–0.95.</small>
+            </label>
+          </div>
+          <div class="voice-actions">
+            <button id="agent-test-btn" class="ghost small" type="button">🔊 Test voice</button>
+            <button id="agent-test-mc-btn" class="ghost small" type="button">🔊 Test multiple-choice cadence</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LLM Judge config (shared) -->
+      <div class="llm-toggle hidden" id="llm-toggle">
+        <h3>LLM Judge <span class="badge">semantic answer matching</span></h3>
+        <label class="toggle">
+          <input type="checkbox" id="llm-enable" />
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">
+            <strong>Use an LLM to judge spoken answers</strong>
+            <small>Tolerant to phrasing, synonyms, partial answers. Cross-checked against the rule-based judge — disagreements are flagged for human review. Choose Claude or GPT below.</small>
+          </span>
+        </label>
+
+        <div id="llm-config" class="hidden">
+          <label class="field" id="llm-key-google-field">
+            <span>Google AI Studio API key</span>
+            <input type="password" id="llm-key-google" placeholder="AIza..." autocomplete="off" />
+            <small>For Gemini models. Free tier: 15 req/min, 1M tokens/day. Get a key at aistudio.google.com.</small>
+          </label>
+          <label class="field" id="llm-key-anthropic-field">
+            <span>Anthropic API key</span>
+            <input type="password" id="llm-key-anthropic" placeholder="sk-ant-..." autocomplete="off" />
+            <small>Used when a Claude model is selected. Stored in this browser's localStorage.</small>
+          </label>
+          <label class="field" id="llm-key-openai-field">
+            <span>OpenAI API key</span>
+            <input type="password" id="llm-key-openai" placeholder="sk-..." autocomplete="off" />
+            <small>Used when a GPT model is selected. Stored in this browser's localStorage.</small>
+          </label>
+          <label class="field">
+            <span>Model</span>
+            <select id="llm-model"></select>
+            <small id="llm-model-cost"></small>
+          </label>
+          <div class="llm-actions">
+            <button id="llm-test-btn" class="ghost small" type="button">Test key</button>
+            <button id="llm-clear-btn" class="ghost small" type="button">Clear key</button>
+          </div>
+          <div id="llm-test-result" class="support-line"></div>
+
+          <label class="mock-row" id="mock-row">
+            <input type="checkbox" id="mock-enable" />
+            <span>
+              <strong>Mock mode (dev only)</strong>
+              <small>Returns hardcoded fixture responses instead of calling the real API. No spending, no key needed. Perfect for testing UI flows.</small>
+            </span>
+          </label>
+        </div>
+
+        <details class="guardrails-info">
+          <summary>🛡️ Anti-hallucination guardrails (8)</summary>
+          <ol id="guardrails-list"></ol>
+        </details>
+
+        <div class="generator-section">
+          <h4>🤖 Real-time question generator</h4>
+          <p>Generates fresh variants for your weakest concepts, validated with a 2-pass grounding check. Adds them to the bank for future matches.</p>
+          <div class="generator-controls">
+            <label class="inline-field">
+              <span>Concepts</span>
+              <select id="gen-max-concepts">
+                <option value="3">3 weakest</option>
+                <option value="5" selected>5 weakest</option>
+                <option value="10">10 weakest</option>
+              </select>
+            </label>
+            <label class="inline-field">
+              <span>Variants each</span>
+              <select id="gen-per-concept">
+                <option value="1" selected>1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+              </select>
+            </label>
+            <button id="gen-run-btn" class="primary small" type="button">Generate</button>
+            <button id="gen-clear-btn" class="ghost small" type="button">Clear cache</button>
+          </div>
+          <div id="gen-status" class="gen-status"></div>
+          <div id="gen-results" class="gen-results"></div>
+        </div>
+      </div>
+
+      <div class="setup-actions hidden" id="setup-actions">
+        <button id="start-btn" class="primary large">Start Match</button>
+      </div>
+
+      <div class="format-note">
+        <h3>NSB Format (per <a href="RULES.md">RULES.md</a>)</h3>
+        <ul>
+          <li><strong>Toss-up</strong> (4 pts): Either team buzzes. 5-second window after the question is read. No team consult on toss-ups (verbal/audible only — NSB allows non-verbal). Wrong answer → opposing team gets 5 sec, no penalty.</li>
+          <li><strong>Bonus</strong> (10 pts): Only the toss-up winner plays. 20 seconds. Team consult allowed. Captain answers (per Rule 3-9 — not strictly enforced in this app).</li>
+          <li><strong>Interrupt penalty:</strong> +4 to opponent if a player buzzes mid-read and answers wrong. <em>(Not yet implemented — see RULES.md §12.)</em></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ Two-Team Game Screen ============ -->
+    <section id="game-two-team" class="screen">
+      <header class="scoreboard">
+        <div class="team team1">
+          <div class="team-name" id="t1-name">Team 1</div>
+          <div class="team-score" id="t1-score">0</div>
+          <div class="team-key">Buzz: A</div>
+        </div>
+        <div class="round-info">
+          <div class="round-num" id="round-num">Round 1</div>
+          <div class="category" id="category">—</div>
+          <div class="phase-label" id="phase-label">Toss-up</div>
+        </div>
+        <div class="team team2">
+          <div class="team-name" id="t2-name">Team 2</div>
+          <div class="team-score" id="t2-score">0</div>
+          <div class="team-key">Buzz: L</div>
+        </div>
+      </header>
+
+      <main class="play-area">
+        <div class="timer-bar">
+          <div class="timer-fill" id="timer-fill"></div>
+          <div class="timer-text" id="timer-text">—</div>
+        </div>
+
+        <div class="question-card" id="question-card">
+          <div class="question-type" id="question-type">Toss-up · Multiple Choice</div>
+          <div class="question-text" id="question-text">Press "Read Question" to begin.</div>
+          <div class="response-display hidden" id="tt-response-display">
+            <div class="response-label" id="tt-response-label">Team said</div>
+            <div class="response-text" id="tt-response-text"></div>
+          </div>
+          <div class="answer-reveal hidden" id="answer-reveal"></div>
+          <div class="explanation-panel hidden" id="tt-explanation-panel">
+            <div class="explanation-label">💡 Why</div>
+            <div class="explanation-text" id="tt-explanation-text"></div>
+          </div>
+          <div class="agent-transcript hidden" id="agent-transcript-tt"></div>
+        </div>
+
+        <div class="controls">
+          <button id="read-btn" class="primary">Read Question</button>
+          <button id="correct-btn" class="success hidden">Correct</button>
+          <button id="incorrect-btn" class="danger hidden">Incorrect</button>
+          <button id="reveal-btn" class="ghost hidden">Reveal Answer</button>
+          <button id="next-btn" class="primary hidden">Next Round →</button>
+        </div>
+
+        <div class="status-line" id="status-line">Press "Read Question" to start round 1.</div>
+      </main>
+
+      <footer class="game-footer">
+        <button id="end-btn" class="ghost">End Match</button>
+      </footer>
+    </section>
+
+    <!-- ============ Solo Game Screen ============ -->
+    <section id="game-solo" class="screen">
+      <header class="scoreboard scoreboard-solo">
+        <div class="team team-solo">
+          <div class="team-name" id="solo-player-name">Player</div>
+          <div class="team-score" id="solo-score">0</div>
+          <div class="solo-stats">
+            <span><span id="solo-correct">0</span> ✓</span>
+            <span><span id="solo-incorrect">0</span> ✗</span>
+          </div>
+        </div>
+        <div class="round-info">
+          <div class="round-num" id="solo-round-num">Round 1</div>
+          <div class="category" id="solo-category">—</div>
+          <div class="phase-label" id="solo-phase-label">Toss-up</div>
+        </div>
+        <div class="team team-solo">
+          <div class="team-name">Accuracy</div>
+          <div class="team-score" id="solo-accuracy">—</div>
+          <div class="solo-stats"><span id="solo-streak">streak: 0</span></div>
+        </div>
+      </header>
+
+      <main class="play-area">
+        <div class="timer-bar">
+          <div class="timer-fill" id="solo-timer-fill"></div>
+          <div class="timer-text" id="solo-timer-text">—</div>
+        </div>
+
+        <div class="question-card" id="solo-question-card">
+          <div class="question-type" id="solo-question-type">Toss-up · Multiple Choice</div>
+          <div class="question-text" id="solo-question-text">Press "Read Question" to begin.</div>
+          <div class="response-display hidden" id="solo-response-display">
+            <div class="response-label">You said</div>
+            <div class="response-text" id="solo-response-text"></div>
+          </div>
+          <div class="answer-reveal hidden" id="solo-answer-reveal"></div>
+          <div class="explanation-panel hidden" id="solo-explanation-panel">
+            <div class="explanation-label">💡 Why</div>
+            <div class="explanation-text" id="solo-explanation-text"></div>
+          </div>
+          <div class="agent-transcript hidden" id="agent-transcript-solo"></div>
+          <div class="answer-input-wrap hidden" id="solo-answer-wrap">
+            <input type="text" id="solo-answer-input" placeholder="Type your answer or speak it…" autocomplete="off" />
+            <button id="solo-submit-btn" class="primary">Submit</button>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="solo-read-btn" class="primary">Read Question</button>
+          <button id="solo-buzz-btn" class="primary hidden">I'm Ready (Space)</button>
+          <button id="solo-reveal-btn" class="ghost hidden">I don't know — reveal</button>
+          <button id="solo-next-btn" class="primary hidden">Next Round →</button>
+          <button id="solo-override-correct" class="success hidden small">Override: Correct</button>
+          <button id="solo-override-incorrect" class="danger hidden small">Override: Incorrect</button>
+        </div>
+
+        <div class="status-line" id="solo-status-line">Press "Read Question" to start.</div>
+      </main>
+
+      <footer class="game-footer">
+        <button id="solo-end-btn" class="ghost">End Match</button>
+      </footer>
+    </section>
+
+    <!-- ============ Results Screen ============ -->
+    <section id="results" class="screen">
+      <h1>Match Complete</h1>
+      <div id="results-two-team" class="results-block">
+        <div class="final-scores">
+          <div class="final-team" id="final-t1">
+            <div class="final-name">Team 1</div>
+            <div class="final-score">0</div>
+          </div>
+          <div class="versus">vs</div>
+          <div class="final-team" id="final-t2">
+            <div class="final-name">Team 2</div>
+            <div class="final-score">0</div>
+          </div>
+        </div>
+        <div class="winner" id="winner">—</div>
+      </div>
+
+      <div id="results-solo" class="results-block hidden">
+        <div class="solo-final">
+          <div class="solo-final-row">
+            <div class="solo-final-label">Final Score</div>
+            <div class="solo-final-value" id="solo-final-score">0</div>
+          </div>
+          <div class="solo-final-row">
+            <div class="solo-final-label">Accuracy</div>
+            <div class="solo-final-value" id="solo-final-accuracy">—</div>
+          </div>
+          <div class="solo-final-row">
+            <div class="solo-final-label">Toss-ups</div>
+            <div class="solo-final-value" id="solo-final-tossups">—</div>
+          </div>
+          <div class="solo-final-row">
+            <div class="solo-final-label">Bonuses</div>
+            <div class="solo-final-value" id="solo-final-bonuses">—</div>
+          </div>
+        </div>
+
+        <div class="review-section">
+          <h2>Round-by-round review</h2>
+          <div class="review-list" id="solo-review-list"></div>
+        </div>
+      </div>
+
+      <div class="results-actions">
+        <button id="restart-btn" class="primary">New Match</button>
+        <button id="results-dashboard-btn" class="ghost">📊 View Dashboard</button>
+      </div>
+    </section>
+
+    <!-- ============ Dashboard Screen ============ -->
+    <section id="dashboard" class="screen">
+      <header class="dashboard-header">
+        <div>
+          <h1>📊 Practice Progress</h1>
+          <p class="dashboard-subtitle">Track improvement, identify weak concepts, and review past matches.</p>
+        </div>
+        <div class="dashboard-actions">
+          <button id="dash-back-btn" class="ghost">← Back</button>
+          <button id="dash-export-btn" class="ghost small">Export JSON</button>
+          <button id="dash-clear-btn" class="ghost small">Clear data</button>
+        </div>
+      </header>
+
+      <div id="dash-empty" class="empty-state hidden">
+        <div class="empty-state-icon">🌱</div>
+        <h3>No matches yet</h3>
+        <p>Play a solo or two-team match — your progress will appear here.</p>
+      </div>
+
+      <div id="dash-content">
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-num" id="stat-matches">0</div>
+            <div class="stat-label">Matches played</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-questions">0</div>
+            <div class="stat-label">Questions answered</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-accuracy">—</div>
+            <div class="stat-label">Overall accuracy</div>
+            <div class="stat-extra" id="stat-split"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num" id="stat-best">—</div>
+            <div class="stat-label">Best match score</div>
+          </div>
+        </div>
+
+        <section class="dash-section">
+          <h2>Accuracy trend (last 10 matches)</h2>
+          <div class="trend-chart" id="trend-chart"></div>
+        </section>
+
+        <section class="dash-section">
+          <h2>Accuracy by category</h2>
+          <div class="cat-bars" id="category-bars"></div>
+        </section>
+
+        <section class="dash-section">
+          <h2>Concept mastery</h2>
+          <div class="mastery-tabs">
+            <button class="tab active" data-filter="all" type="button">All</button>
+            <button class="tab" data-filter="needs_work" type="button">Needs work</button>
+            <button class="tab" data-filter="struggling" type="button">Struggling</button>
+            <button class="tab" data-filter="learning" type="button">Learning</button>
+            <button class="tab" data-filter="mastered" type="button">Mastered</button>
+            <button class="tab" data-filter="untouched" type="button">Untouched</button>
+          </div>
+          <div class="mastery-table-wrap">
+            <table class="mastery-table">
+              <thead>
+                <tr>
+                  <th>Concept</th>
+                  <th>Category</th>
+                  <th>Attempts</th>
+                  <th>Accuracy</th>
+                  <th>Mastery</th>
+                </tr>
+              </thead>
+              <tbody id="mastery-rows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="dash-section">
+          <h2>Recent matches</h2>
+          <div class="match-list" id="match-list"></div>
+        </section>
+      </div>
+    </section>
+  </div>
+
+  <!-- ============ Agent Status Overlay ============ -->
+  <div id="agent-overlay" class="agent-overlay hidden" aria-live="polite">
+    <div class="agent-orb" id="agent-orb"></div>
+    <div class="agent-status-text" id="agent-status-text">Idle</div>
+    <div class="agent-transcript-live" id="agent-transcript-live"></div>
+  </div>
+
+  <script>
+    // Dev cache-buster: append the current minute to all script srcs so the
+    // browser refetches whenever we edit a file. Cheap and effective until
+    // we have a real build pipeline.
+    (() => {
+      const cb = '?v=' + Date.now();
+      const core = [
+        'agent.js', 'llm-judge.js', 'mock-api.js', 'llm-generator.js',
+        'progress.js', 'dashboard.js', 'app.js',
+      ];
+      // Test harness + suites only load when ?tests=1 is in the URL.
+      const urlParams = new URLSearchParams(window.location.search);
+      const includeTests = urlParams.has('tests');
+      const testFiles = includeTests ? [
+        'tests.js',
+        'tests/judge.test.js',
+        'tests/progress.test.js',
+        'tests/bank.test.js',
+        'tests/bank-lint.test.js',
+      ] : [];
+      const all = [...core, ...testFiles];
+      document.write(all.map((s) => `<script src="${s}${cb}"><\/script>`).join(''));
+    })();
+  </script>
+</body>
+</html>

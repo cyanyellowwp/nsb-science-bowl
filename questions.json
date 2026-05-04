@@ -1,0 +1,578 @@
+{
+  "schema_version": "2.0",
+  "source": "Campbell Biology, Chapters 1-2 (Themes, Evolution, Scientific Inquiry; The Chemical Context of Life)",
+  "audience": "middle_school_nsb",
+  "style_guide": "See RULES.md §11. Questions calibrated against the 2019 DOE NSB-MS sample bank: target 15-22 words, no formal connectives ('whereby', 'thereby', 'wherein'), at most one nested subordinate clause, technical jargon belongs in the answer not the stem.",
+  "last_updated": "2026-05-02",
+  "concepts": [
+    {
+      "id": "levels-of-organization",
+      "category": "Biology - General",
+      "subcategory": "Themes / Hierarchy",
+      "tags": ["ch1", "themes", "hierarchy"],
+      "tossup_variants": [
+        {
+          "id": "tu-loo-1",
+          "type": "multiple_choice",
+          "question": "Which of the following lists the levels of biological organization in the correct order from smallest to largest? W) Cell, tissue, organ, organism. X) Molecule, organelle, cell, tissue. Y) Atom, organelle, organ, cell. Z) Tissue, cell, organ, population.",
+          "answer": "X",
+          "answer_text": "Molecule, organelle, cell, tissue"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-loo-1",
+          "type": "short_answer",
+          "question": "Name all three domains of life.",
+          "answer": "Bacteria, Archaea, and Eukarya"
+        }
+      ]
+    },
+    {
+      "id": "emergent-properties",
+      "category": "Biology - General",
+      "subcategory": "Themes / Hierarchy",
+      "tags": ["ch1", "themes", "organization"],
+      "tossup_variants": [
+        {
+          "id": "tu-emp-1",
+          "type": "short_answer",
+          "question": "What is the term for new characteristics that appear at each level of biological organization but are not present at simpler levels?",
+          "answer": "Emergent properties"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-emp-1",
+          "type": "multiple_choice",
+          "question": "Which of the following is NOT one of the unifying themes of biology? W) Organization. X) Information. Y) Energy and matter. Z) Determinism.",
+          "answer": "Z",
+          "answer_text": "Determinism"
+        }
+      ]
+    },
+    {
+      "id": "darwin-natural-selection",
+      "category": "Biology - Evolution",
+      "subcategory": "Darwin",
+      "tags": ["ch1", "evolution", "darwin"],
+      "tossup_variants": [
+        {
+          "id": "tu-dns-1",
+          "type": "short_answer",
+          "question": "Who proposed natural selection as the mechanism of evolution in his 1859 book On the Origin of Species?",
+          "answer": "Charles Darwin"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-dns-1",
+          "type": "short_answer",
+          "question": "Natural selection requires three conditions. Name all three.",
+          "answer": "Variation among individuals, heritability of traits, and differential reproductive success (accept: variation, heredity, and differential survival or reproduction)"
+        }
+      ]
+    },
+    {
+      "id": "inductive-deductive-reasoning",
+      "category": "Biology - Scientific Inquiry",
+      "subcategory": "Reasoning",
+      "tags": ["ch1", "inquiry", "reasoning"],
+      "tossup_variants": [
+        {
+          "id": "tu-idr-1",
+          "type": "multiple_choice",
+          "question": "Which type of reasoning draws general conclusions from many specific observations? W) Deductive. X) Inductive. Y) Hypothetical. Z) Abductive.",
+          "answer": "X",
+          "answer_text": "Inductive"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-idr-1",
+          "type": "short_answer",
+          "question": "What is the term for a testable, proposed explanation for an observation?",
+          "answer": "Hypothesis"
+        }
+      ]
+    },
+    {
+      "id": "controlled-experiment",
+      "category": "Biology - Scientific Inquiry",
+      "subcategory": "Experimental Design",
+      "tags": ["ch1", "inquiry", "experiment"],
+      "tossup_variants": [
+        {
+          "id": "tu-ctrl-1",
+          "type": "short_answer",
+          "question": "In a controlled experiment, what is the name for the group that does NOT receive the experimental treatment?",
+          "answer": "Control group"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-ctrl-1",
+          "type": "multiple_choice",
+          "question": "Which of the following best describes a scientific theory? W) A guess about how nature works. X) A broad explanation supported by extensive evidence. Y) An untested idea. Z) A single experimental result.",
+          "answer": "X",
+          "answer_text": "A broad explanation supported by extensive evidence"
+        }
+      ]
+    },
+    {
+      "id": "homeostasis",
+      "category": "Biology - General",
+      "subcategory": "Themes / Regulation",
+      "tags": ["ch1", "themes", "regulation"],
+      "tossup_variants": [
+        {
+          "id": "tu-hom-1",
+          "type": "short_answer",
+          "question": "What is the term for the process by which organisms maintain a stable internal environment?",
+          "answer": "Homeostasis"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-hom-1",
+          "type": "short_answer",
+          "question": "Name the domain that contains prokaryotic organisms such as E. coli and cyanobacteria.",
+          "answer": "Bacteria"
+        }
+      ]
+    },
+    {
+      "id": "evidence-for-evolution",
+      "category": "Biology - Evolution",
+      "subcategory": "Evidence",
+      "tags": ["ch1", "evolution", "evidence"],
+      "tossup_variants": [
+        {
+          "id": "tu-evo-1",
+          "type": "multiple_choice",
+          "question": "The fossil record, comparative anatomy, and molecular biology all provide evidence for which of the following? W) Spontaneous generation. X) Intelligent design. Y) Evolution by natural selection. Z) Lamarckian inheritance.",
+          "answer": "Y",
+          "answer_text": "Evolution by natural selection"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-evo-1",
+          "type": "short_answer",
+          "question": "What is the term for similar structures in different species that come from a common ancestor, like the forelimbs of humans, cats, and bats?",
+          "answer": "Homologous structures"
+        }
+      ]
+    },
+    {
+      "id": "elements-of-life",
+      "category": "Chemistry - Atoms",
+      "subcategory": "Elements",
+      "tags": ["ch2", "atoms", "elements"],
+      "tossup_variants": [
+        {
+          "id": "tu-eol-1",
+          "type": "short_answer",
+          "question": "What four elements make up about 96 percent of living matter?",
+          "answer": "Oxygen, carbon, hydrogen, and nitrogen"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-eol-1",
+          "type": "multiple_choice",
+          "question": "What determines an atom's atomic number? W) Number of neutrons. X) Number of protons. Y) Number of electrons in the outer shell. Z) Sum of protons and neutrons.",
+          "answer": "X",
+          "answer_text": "Number of protons"
+        }
+      ]
+    },
+    {
+      "id": "isotopes",
+      "category": "Chemistry - Atoms",
+      "subcategory": "Isotopes",
+      "tags": ["ch2", "atoms", "isotopes"],
+      "tossup_variants": [
+        {
+          "id": "tu-iso-1",
+          "type": "multiple_choice",
+          "question": "Atoms of the same element with different numbers of neutrons are called: W) Ions. X) Isomers. Y) Isotopes. Z) Allotropes.",
+          "answer": "Y",
+          "answer_text": "Isotopes"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-iso-1",
+          "type": "short_answer",
+          "question": "Carbon-14 has a mass number of 14 and an atomic number of 6. How many neutrons does it have?",
+          "answer": "8"
+        }
+      ]
+    },
+    {
+      "id": "electron-shells",
+      "category": "Chemistry - Atoms",
+      "subcategory": "Electrons",
+      "tags": ["ch2", "atoms", "shells"],
+      "tossup_variants": [
+        {
+          "id": "tu-esh-1",
+          "type": "short_answer",
+          "question": "What is the maximum number of electrons that the second electron shell of an atom can hold?",
+          "answer": "8"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-esh-1",
+          "type": "short_answer",
+          "question": "What is the name for the electrons in an atom's outermost shell?",
+          "answer": "Valence electrons"
+        }
+      ]
+    },
+    {
+      "id": "covalent-bond",
+      "category": "Chemistry - Bonding",
+      "subcategory": "Covalent",
+      "tags": ["ch2", "bonding", "covalent"],
+      "tossup_variants": [
+        {
+          "id": "tu-cov-1",
+          "type": "multiple_choice",
+          "question": "What type of chemical bond forms when two atoms share a pair of valence electrons? W) Ionic. X) Covalent. Y) Hydrogen. Z) Van der Waals.",
+          "answer": "X",
+          "answer_text": "Covalent"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-cov-1",
+          "type": "short_answer",
+          "question": "What is the term for a covalent bond with unequal electron sharing due to different electronegativities?",
+          "answer": "Polar covalent bond"
+        }
+      ]
+    },
+    {
+      "id": "electronegativity",
+      "category": "Chemistry - Bonding",
+      "subcategory": "Electronegativity",
+      "tags": ["ch2", "bonding", "electronegativity"],
+      "tossup_variants": [
+        {
+          "id": "tu-eng-1",
+          "type": "short_answer",
+          "question": "What is the term for the attraction of an atom for shared electrons in a covalent bond?",
+          "answer": "Electronegativity"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-eng-1",
+          "type": "multiple_choice",
+          "question": "Which of these elements is the most electronegative? W) Carbon. X) Hydrogen. Y) Oxygen. Z) Nitrogen.",
+          "answer": "Y",
+          "answer_text": "Oxygen"
+        }
+      ]
+    },
+    {
+      "id": "ionic-bond",
+      "category": "Chemistry - Bonding",
+      "subcategory": "Ionic",
+      "tags": ["ch2", "bonding", "ionic"],
+      "tossup_variants": [
+        {
+          "id": "tu-ion-1",
+          "type": "multiple_choice",
+          "question": "An ionic bond results from which of the following? W) Equal sharing of electrons. X) Transfer of electrons from one atom to another. Y) Sharing of protons. Z) Attraction between hydrogen and oxygen.",
+          "answer": "X",
+          "answer_text": "Transfer of electrons from one atom to another"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-ion-1",
+          "type": "short_answer",
+          "question": "What is the term for a charged atom that has gained or lost electrons?",
+          "answer": "Ion"
+        }
+      ]
+    },
+    {
+      "id": "hydrogen-bond",
+      "category": "Chemistry - Bonding",
+      "subcategory": "Hydrogen",
+      "tags": ["ch2", "bonding", "hydrogen"],
+      "tossup_variants": [
+        {
+          "id": "tu-hyd-1",
+          "type": "short_answer",
+          "question": "What is the name for the weak bond between a hydrogen atom on one molecule and an electronegative atom on another?",
+          "answer": "Hydrogen bond"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-hyd-1",
+          "type": "short_answer",
+          "question": "Name two macromolecules whose three-dimensional shape depends heavily on hydrogen bonding.",
+          "answer": "Any two of: DNA, RNA, proteins (accept water with any of the above)"
+        }
+      ]
+    },
+    {
+      "id": "chemical-reactions",
+      "category": "Chemistry - Reactions",
+      "subcategory": "Reactants/Products",
+      "tags": ["ch2", "reactions"],
+      "tossup_variants": [
+        {
+          "id": "tu-rxn-1",
+          "type": "multiple_choice",
+          "question": "In a chemical reaction, the starting materials are called: W) Products. X) Catalysts. Y) Reactants. Z) Substrates.",
+          "answer": "Y",
+          "answer_text": "Reactants"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-rxn-1",
+          "type": "short_answer",
+          "question": "What is the term for a state where the forward and reverse rates of a reaction are equal?",
+          "answer": "Chemical equilibrium"
+        }
+      ]
+    },
+    {
+      "id": "population",
+      "category": "Biology - General",
+      "subcategory": "Ecology",
+      "tags": ["ch1", "ecology", "population"],
+      "tossup_variants": [
+        {
+          "id": "tu-pop-1",
+          "type": "short_answer",
+          "question": "What is the term for a group of individuals of the same species living in the same area at the same time?",
+          "answer": "Population"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-pop-1",
+          "type": "multiple_choice",
+          "question": "Which level of biological organization includes both living and non-living components? W) Population. X) Community. Y) Ecosystem. Z) Organism.",
+          "answer": "Y",
+          "answer_text": "Ecosystem"
+        }
+      ]
+    },
+    {
+      "id": "darwin-voyage",
+      "category": "Biology - Evolution",
+      "subcategory": "Darwin",
+      "tags": ["ch1", "evolution", "darwin"],
+      "tossup_variants": [
+        {
+          "id": "tu-voy-1",
+          "type": "multiple_choice",
+          "question": "Darwin made many of his key observations during a voyage on which ship? W) HMS Endeavour. X) HMS Beagle. Y) HMS Victory. Z) HMS Challenger.",
+          "answer": "X",
+          "answer_text": "HMS Beagle"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-voy-1",
+          "type": "short_answer",
+          "question": "On what islands did Darwin observe finches that helped shape his theory of natural selection?",
+          "answer": "Galapagos Islands"
+        }
+      ]
+    },
+    {
+      "id": "subatomic-particles",
+      "category": "Chemistry - Atoms",
+      "subcategory": "Subatomic",
+      "tags": ["ch2", "atoms", "particles"],
+      "tossup_variants": [
+        {
+          "id": "tu-sub-1",
+          "type": "short_answer",
+          "question": "What subatomic particle has no electric charge and is found in the nucleus?",
+          "answer": "Neutron"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-sub-1",
+          "type": "short_answer",
+          "question": "What is the approximate mass, in daltons, of a single proton or a single neutron?",
+          "answer": "1 dalton (accept: approximately 1)"
+        }
+      ]
+    },
+    {
+      "id": "carbon-bonds",
+      "category": "Chemistry - Bonding",
+      "subcategory": "Carbon",
+      "tags": ["ch2", "bonding", "carbon"],
+      "tossup_variants": [
+        {
+          "id": "tu-cb-1",
+          "type": "multiple_choice",
+          "question": "How many covalent bonds can a single carbon atom typically form? W) 1. X) 2. Y) 3. Z) 4.",
+          "answer": "Z",
+          "answer_text": "4"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-cb-1",
+          "type": "short_answer",
+          "question": "What is the term for the three-dimensional arrangement of atoms in a molecule?",
+          "answer": "Molecular shape (accept: molecular geometry, conformation)"
+        }
+      ]
+    },
+    {
+      "id": "discovery-science",
+      "category": "Biology - Scientific Inquiry",
+      "subcategory": "Methods",
+      "tags": ["ch1", "inquiry", "methods"],
+      "tossup_variants": [
+        {
+          "id": "tu-dsc-1",
+          "type": "short_answer",
+          "question": "What is the term for a study that observes patterns in nature without changing any variables?",
+          "answer": "Discovery science (accept: descriptive science, observational study)"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-dsc-1",
+          "type": "multiple_choice",
+          "question": "An experiment finds no difference between fertilized plants and control plants. What should the scientist do? W) Discard the data. X) Reject or revise the hypothesis. Y) Repeat until results match. Z) Publish without revision.",
+          "answer": "X",
+          "answer_text": "Reject or revise the hypothesis"
+        }
+      ]
+    },
+    {
+      "id": "lowest-level-of-life",
+      "category": "Biology - General",
+      "subcategory": "Themes / Hierarchy",
+      "tags": ["ch1", "themes", "cell"],
+      "tossup_variants": [
+        {
+          "id": "tu-lll-1",
+          "type": "multiple_choice",
+          "question": "What is the lowest level of biological organization at which life exists? W) Atom. X) Molecule. Y) Organelle. Z) Cell.",
+          "answer": "Z",
+          "answer_text": "Cell"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-lll-1",
+          "type": "short_answer",
+          "question": "What is the term for the process by which DNA directs protein synthesis?",
+          "answer": "Gene expression"
+        }
+      ]
+    },
+    {
+      "id": "noble-gases",
+      "category": "Chemistry - Atoms",
+      "subcategory": "Periodic Table",
+      "tags": ["ch2", "atoms", "noble-gases"],
+      "tossup_variants": [
+        {
+          "id": "tu-ngs-1",
+          "type": "short_answer",
+          "question": "What word describes an atom with a complete valence shell that does not react easily?",
+          "answer": "Inert (accept: stable, unreactive)"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-ngs-1",
+          "type": "multiple_choice",
+          "question": "Which group of elements has full valence shells and reacts very little? W) Alkali metals. X) Halogens. Y) Noble gases. Z) Transition metals.",
+          "answer": "Y",
+          "answer_text": "Noble gases"
+        }
+      ]
+    },
+    {
+      "id": "adaptation",
+      "category": "Biology - Evolution",
+      "subcategory": "Adaptation",
+      "tags": ["ch1", "evolution", "adaptation"],
+      "tossup_variants": [
+        {
+          "id": "tu-adp-1",
+          "type": "short_answer",
+          "question": "What is the term for inherited traits that improve survival and reproduction in a specific environment?",
+          "answer": "Adaptation"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-adp-1",
+          "type": "short_answer",
+          "question": "Which scientist independently developed a theory of evolution by natural selection at the same time as Darwin?",
+          "answer": "Alfred Russel Wallace"
+        }
+      ]
+    },
+    {
+      "id": "bond-strength",
+      "category": "Chemistry - Bonding",
+      "subcategory": "Comparative Strength",
+      "tags": ["ch2", "bonding", "strength"],
+      "tossup_variants": [
+        {
+          "id": "tu-bs-1",
+          "type": "multiple_choice",
+          "question": "Which list correctly orders these bond types from strongest to weakest in living cells? W) Hydrogen, ionic, covalent. X) Covalent, ionic, hydrogen. Y) Ionic, hydrogen, covalent. Z) Hydrogen, covalent, ionic.",
+          "answer": "X",
+          "answer_text": "Covalent, ionic, hydrogen"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-bs-1",
+          "type": "short_answer",
+          "question": "What is the term for very weak attractions between molecules caused by temporary uneven electron distribution?",
+          "answer": "Van der Waals interactions (accept: London dispersion forces)"
+        }
+      ]
+    },
+    {
+      "id": "biodiversity",
+      "category": "Biology - General",
+      "subcategory": "Diversity",
+      "tags": ["ch1", "diversity", "domains"],
+      "tossup_variants": [
+        {
+          "id": "tu-bio-1",
+          "type": "short_answer",
+          "question": "What is the term for the variety of life, often measured at genetic, species, and ecosystem levels?",
+          "answer": "Biodiversity"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-bio-1",
+          "type": "multiple_choice",
+          "question": "Which domain contains organisms whose cells have a membrane-bound nucleus? W) Bacteria. X) Archaea. Y) Eukarya. Z) Both X and Y.",
+          "answer": "Y",
+          "answer_text": "Eukarya"
+        }
+      ]
+    }
+  ]
+}
