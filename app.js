@@ -13,9 +13,10 @@
   // ---------------- App state ----------------
   const App = {
     rounds: [],            // active match's randomized round list (built at startMatch)
-    bank: null,            // merged superset: seed + DOE corpus + (later) generated
+    bank: null,            // merged superset: seed + external sources + generated
     seed: null,            // hand-curated seed bank (questions.json)
-    corpus: null,          // DOE NSB historical corpus (corpus-doe.json)
+    corpora: [],           // loaded source banks from content-sources.json
+    sourceMeta: [],        // [{id,label,count}]
     mode: null,            // 'two-team' | 'solo'
     agentEnabled: false,
     agentDriving: false,
@@ -24,6 +25,7 @@
       length: 25,
       topic: 'all',        // 'all' | 'ch1' | 'ch2' | 'doe-corpus'
       year: 'all',         // 'all' | '2015' .. '2022'
+      subject: 'all',      // 'all' | 'biology' | 'physical_science'
     },
     game: null,
   };
@@ -36,17 +38,19 @@
   async function init() {
     try {
       const v = '?v=' + Date.now();
-      const [seedRes, corpusRes] = await Promise.all([
+      const [seedRes, sourcesRes] = await Promise.all([
         fetch('questions.json' + v, { cache: 'no-store' }),
-        fetch('corpus-doe.json' + v, { cache: 'no-store' }).catch(() => null),
+        fetch('content-sources.json' + v, { cache: 'no-store' }).catch(() => null),
       ]);
       App.seed = await seedRes.json();
-      App.corpus = corpusRes && corpusRes.ok ? await corpusRes.json() : null;
-      App.bank = mergeBanks(App.seed, App.corpus);
+      const sourceConfig = sourcesRes && sourcesRes.ok ? await sourcesRes.json() : null;
+      App.corpora = await loadConfiguredSources(sourceConfig, v);
+      App.sourceMeta = App.corpora.map((s) => ({ id: s.id, label: s.label, count: (s.data.concepts || []).length }));
+      App.bank = mergeBanks(App.seed, App.corpora);
       window.QuestionBank = App.bank;
       const seedN = (App.seed.concepts || App.seed.rounds || []).length;
-      const corpusN = App.corpus ? (App.corpus.concepts || []).length : 0;
-      console.info(`Loaded bank: ${seedN} seed + ${corpusN} corpus = ${App.bank.concepts.length} concepts`);
+      const corpusN = App.corpora.reduce((n, s) => n + ((s.data.concepts || []).length), 0);
+      console.info(`Loaded bank: ${seedN} seed + ${corpusN} external = ${App.bank.concepts.length} concepts`);
     } catch (err) {
       console.error('Failed to load questions:', err);
       alert('Could not load question banks. Serve over http (a server is already running).');
@@ -57,8 +61,8 @@
     bindAgentOverlay();
   }
 
-  /** Merge the seed (v1 or v2) and DOE corpus (v2) into a single v2 bank. */
-  function mergeBanks(seed, corpus) {
+  /** Merge the seed (v1 or v2) and external source banks (v2) into one v2 bank. */
+  function mergeBanks(seed, sourceBanks) {
     const concepts = [];
     if (seed) {
       if (Array.isArray(seed.concepts)) {
@@ -76,8 +80,15 @@
         }
       }
     }
-    if (corpus && Array.isArray(corpus.concepts)) {
-      for (const c of corpus.concepts) concepts.push({ ...c, _source: 'corpus' });
+    for (const src of sourceBanks || []) {
+      if (!src || !src.data || !Array.isArray(src.data.concepts)) continue;
+      for (const c of src.data.concepts) {
+        concepts.push({
+          ...c,
+          subject: c.subject || inferSubject(c),
+          _source: src.id || 'corpus',
+        });
+      }
     }
     // Merge any LLM-generated variants the user has accumulated locally
     if (window.Generator) {
@@ -85,16 +96,41 @@
     }
     return {
       schema_version: '2.0',
-      source: 'merged: seed + DOE corpus + generated',
+      source: 'merged: seed + external corpora + generated',
       concepts,
     };
   }
 
   /** Re-merge banks (e.g., after Generator adds new variants). */
   function refreshBank() {
-    App.bank = mergeBanks(App.seed, App.corpus);
+    App.bank = mergeBanks(App.seed, App.corpora);
     window.QuestionBank = App.bank;
     updateSourceInfo();
+  }
+
+  async function loadConfiguredSources(config, cacheBust) {
+    const fallback = [{ id: 'corpus', label: 'DOE NSB corpus', path: 'corpus-doe.json', enabled: true }];
+    const sources = config && Array.isArray(config.sources) && config.sources.length ? config.sources : fallback;
+    const loaded = [];
+    for (const src of sources) {
+      if (src && src.enabled === false) continue;
+      const id = (src && src.id) || 'corpus';
+      const label = (src && src.label) || id;
+      const path = (src && src.path) || 'corpus-doe.json';
+      try {
+        const res = await fetch(path + cacheBust, { cache: 'no-store' });
+        if (!res.ok) continue;
+        const data = await res.json();
+        if (!Array.isArray(data.concepts)) continue;
+        loaded.push({ id, label, path, data });
+      } catch (_) {}
+    }
+    return loaded;
+  }
+
+  function inferSubject(concept) {
+    const hay = `${concept.category || ''} ${(concept.tags || []).join(' ')}`.toLowerCase();
+    return hay.includes('physical') ? 'physical_science' : 'biology';
   }
 
   /**
@@ -146,11 +182,12 @@
     const source = opts.source || 'all';
     const topic = opts.topic || 'all';
     const year = opts.year || 'all';
+    const subject = opts.subject || 'all';
 
     let pool = bank.concepts.slice();
 
     if (source === 'seed') pool = pool.filter((c) => c._source === 'seed');
-    if (source === 'corpus') pool = pool.filter((c) => c._source === 'corpus');
+    if (source === 'corpus') pool = pool.filter((c) => c._source !== 'seed');
 
     if (topic !== 'all') {
       pool = pool.filter((c) => Array.isArray(c.tags) && c.tags.includes(topic));
@@ -159,6 +196,9 @@
     // Year filter — applies only to corpus concepts (which have a `source.year` and a year tag)
     if (year !== 'all') {
       pool = pool.filter((c) => Array.isArray(c.tags) && c.tags.includes(year));
+    }
+    if (subject !== 'all') {
+      pool = pool.filter((c) => (c.subject || inferSubject(c)) === subject);
     }
 
     if (!pool.length) {
@@ -255,7 +295,8 @@
       $('agent-voice-info').textContent = '⚠ No English voices found in this browser.';
       return;
     }
-    sel.innerHTML = voices.map((v) => {
+    const curated = curateTopVoices(voices, 5);
+    sel.innerHTML = curated.map((v) => {
       const tags = [];
       if (v.isHighQuality) tags.push('Premium');
       else if (v.isEnhanced) tags.push('Enhanced');
@@ -263,9 +304,32 @@
       return `<option value="${escapeAttr(v.name)}">${escapeAttr(v.name)} (${v.lang})${tagStr}</option>`;
     }).join('');
     // Honor saved preference, else auto-pick top-ranked
-    sel.value = Agent.voiceName || voices[0].name;
+    sel.value = Agent.voiceName || curated[0].name;
     Agent.setVoiceByName(sel.value);
     updateVoiceInfo();
+  }
+
+  function curateTopVoices(voices, maxCount) {
+    const ranked = voices.slice();
+    const picks = [];
+    const used = new Set();
+
+    const add = (v) => {
+      if (!v || used.has(v.name)) return;
+      used.add(v.name);
+      picks.push(v);
+    };
+
+    // Must-have preference #1: Samantha
+    add(ranked.find((v) => /\bSamantha\b/i.test(v.name)));
+    // Must-have preference #2: one Google voice
+    add(ranked.find((v) => /\bGoogle\b/i.test(v.name)));
+
+    for (const v of ranked) {
+      if (picks.length >= maxCount) break;
+      add(v);
+    }
+    return picks.slice(0, maxCount);
   }
 
   function updateVoiceInfo() {
@@ -591,16 +655,17 @@
     updateAgentSupport();
     updateSourceInfo();
     populateYearDropdown();
+    populateSubjectDropdown();
     bindMatchOptionsListeners();
   }
 
   function updateSourceInfo() {
     if (!App.bank) return;
     const seedN = App.bank.concepts.filter((c) => c._source === 'seed').length;
-    const corpusN = App.bank.concepts.filter((c) => c._source === 'corpus').length;
+    const corpusN = App.bank.concepts.filter((c) => c._source !== 'seed').length;
     const total = App.bank.concepts.length;
     const info = $('match-source-info');
-    if (info) info.textContent = `${total} concepts total · ${seedN} seed + ${corpusN} from DOE corpus`;
+    if (info) info.textContent = `${total} concepts total · ${seedN} seed + ${corpusN} external`;
   }
 
   /** Populate the Year dropdown from the corpus, with per-year counts. */
@@ -610,7 +675,7 @@
     // Count corpus concepts per year tag
     const counts = new Map();
     for (const c of App.bank.concepts) {
-      if (c._source !== 'corpus' || !Array.isArray(c.tags)) continue;
+      if (c._source === 'seed' || !Array.isArray(c.tags)) continue;
       for (const t of c.tags) {
         if (/^20\d{2}$/.test(t)) counts.set(t, (counts.get(t) || 0) + 1);
       }
@@ -621,10 +686,25 @@
       years.map(([y, n]) => `<option value="${y}">${y} (${n} pair${n === 1 ? '' : 's'})</option>`).join('');
   }
 
+  function populateSubjectDropdown() {
+    const sel = $('match-subject');
+    if (!sel || !App.bank) return;
+    const counts = { biology: 0, physical_science: 0 };
+    for (const c of App.bank.concepts) {
+      if (c._source === 'seed') continue;
+      const s = c.subject || inferSubject(c);
+      if (s === 'biology' || s === 'physical_science') counts[s] += 1;
+    }
+    sel.innerHTML =
+      `<option value="all" selected>All subjects (${counts.biology + counts.physical_science})</option>` +
+      `<option value="biology">Biology (${counts.biology})</option>` +
+      `<option value="physical_science">Physical Science (${counts.physical_science})</option>`;
+  }
+
   /** When the user changes a match option, update the live count hint. */
   function bindMatchOptionsListeners() {
     const upd = () => updateMatchCount();
-    ['match-source', 'match-topic', 'match-year', 'match-length'].forEach((id) => {
+    ['match-source', 'match-topic', 'match-year', 'match-subject', 'match-length'].forEach((id) => {
       const el = $(id);
       if (el && !el.dataset.bound) {
         el.addEventListener('change', upd);
@@ -641,14 +721,16 @@
       source: ($('match-source') || {}).value || 'all',
       topic: ($('match-topic') || {}).value || 'all',
       year: ($('match-year') || {}).value || 'all',
+      subject: ($('match-subject') || {}).value || 'all',
       length: parseInt(($('match-length') || {}).value, 10) || 25,
     };
     // Mirror the filter logic without shuffling/slicing
     let pool = App.bank.concepts.slice();
     if (opts.source === 'seed') pool = pool.filter((c) => c._source === 'seed');
-    if (opts.source === 'corpus') pool = pool.filter((c) => c._source === 'corpus');
+    if (opts.source === 'corpus') pool = pool.filter((c) => c._source !== 'seed');
     if (opts.topic !== 'all') pool = pool.filter((c) => Array.isArray(c.tags) && c.tags.includes(opts.topic));
     if (opts.year !== 'all') pool = pool.filter((c) => Array.isArray(c.tags) && c.tags.includes(opts.year));
+    if (opts.subject !== 'all') pool = pool.filter((c) => (c.subject || inferSubject(c)) === opts.subject);
 
     // Compute rotation breakdown
     const seen = getSeenMap();
@@ -700,9 +782,11 @@
     // Tier 2: rule-based was uncertain — escalate to LLM if available
     if (window.LLMJudge && LLMJudge.isReady()) {
       try {
+        hideQuotaBanner();
         const llmResult = await LLMJudge.judge(spoken, q);
         return { ...llmResult, tier: 2 };
       } catch (err) {
+        maybeShowQuotaBanner(err);
         console.warn('LLM judge threw, falling back to rule:', err);
       }
     }
@@ -725,9 +809,11 @@
   async function generateExplanation(q, studentAnswer, wasCorrect) {
     if (window.LLMJudge && LLMJudge.isReady()) {
       try {
+        hideQuotaBanner();
         const text = await LLMJudge.explain(q, studentAnswer, wasCorrect);
         if (text) return { text, source: 'llm' };
       } catch (err) {
+        maybeShowQuotaBanner(err);
         console.warn('explain failed:', err);
       }
     }
@@ -834,6 +920,26 @@
     }
   }
 
+  function showQuotaBanner(message) {
+    const el = $('quota-banner');
+    if (!el) return;
+    el.textContent = message;
+    el.classList.remove('hidden');
+  }
+
+  function hideQuotaBanner() {
+    const el = $('quota-banner');
+    if (!el) return;
+    el.classList.add('hidden');
+    el.textContent = '';
+  }
+
+  function maybeShowQuotaBanner(err) {
+    const msg = String((err && err.message) || err || '');
+    if (!/\bAPI 429\b/i.test(msg)) return;
+    showQuotaBanner('Free quota hit for LLM requests. Judging/explanations are using fallback behavior. Switch model or add a different provider key in setup.');
+  }
+
   // ---------------- Match start ----------------
   function startMatch() {
     if (!App.mode) {
@@ -845,10 +951,12 @@
     const srcSel = $('match-source');
     const topSel = $('match-topic');
     const yearSel = $('match-year');
+    const subjectSel = $('match-subject');
     if (lenSel) App.matchOpts.length = parseInt(lenSel.value, 10) || 25;
     if (srcSel) App.matchOpts.source = srcSel.value || 'all';
     if (topSel) App.matchOpts.topic = topSel.value || 'all';
     if (yearSel) App.matchOpts.year = yearSel.value || 'all';
+    if (subjectSel) App.matchOpts.subject = subjectSel.value || 'all';
     // Build a fresh randomized round list for this match
     App.rounds = buildRoundsFromBank(App.bank, App.matchOpts);
     if (!App.rounds.length) {
@@ -891,6 +999,9 @@
       this._lastWasBonus = false;
       this.timer = new Timer($('timer-fill'), $('timer-text'));
       this.transcriptEl = $('agent-transcript-tt');
+      this.pttBtn = $('ptt-btn-tt');
+      this.sttFailures = 0;
+      this._pttListening = false;
       this.bindKeys = (e) => this.onKey(e);
     }
 
@@ -909,6 +1020,7 @@
       $('reveal-btn').addEventListener('click', () => this.revealAnswer());
       $('next-btn').addEventListener('click', () => this.nextRound());
       $('end-btn').addEventListener('click', () => this.endMatch());
+      this.bindPttButton();
       document.addEventListener('keydown', this.bindKeys);
 
       this.loadRound();
@@ -939,6 +1051,7 @@
       $('tt-response-text').textContent = '';
       $('tt-explanation-panel').classList.add('hidden');
       $('tt-explanation-text').textContent = '';
+      if (this.pttBtn) this.pttBtn.classList.add('hidden');
       this.timer.reset();
 
       if (App.agentDriving) {
@@ -988,8 +1101,8 @@
       this.setPhase('tossup-buzzed');
       this.flashTeam(team);
       if (App.agentDriving) {
-        this.setStatus(`${this.teamNames[team]} buzzed — listening for answer…`, team);
-        this.runAgentAnswer('tossup');
+        this.setStatus(`${this.teamNames[team]} buzzed. Hold to answer.`, team);
+        this.showPtt(true);
       } else {
         this.setStatus(`${this.teamNames[team]} buzzed in. Did they answer correctly?`, team);
         showButtons('correct-btn', 'incorrect-btn', 'reveal-btn');
@@ -997,6 +1110,7 @@
     }
 
     onCorrect() {
+      this.showPtt(false);
       if (this.phase === 'tossup-buzzed') {
         this.addScore(this.buzzedTeam, TOSSUP_POINTS);
         this.tossupOwner = this.buzzedTeam;
@@ -1022,6 +1136,7 @@
     }
 
     onIncorrect() {
+      this.showPtt(false);
       if (this.phase === 'tossup-buzzed') {
         // Record the wrong-answer attempt for the team that just buzzed
         this._recordAttempt({ team: this.buzzedTeam, kind: 'tossup', correct: false, response: $('tt-response-text').textContent.trim() });
@@ -1040,8 +1155,8 @@
           this.flashTeam(other);
           this.timer.start(FREESHOT_SECONDS, () => this.onIncorrect());
           if (App.agentDriving) {
-            this.setStatus(`${this.teamNames[other]} — your free shot. Listening…`, other);
-            this.runAgentAnswer('tossup');
+            this.setStatus(`${this.teamNames[other]} — your free shot. Hold to answer.`, other);
+            this.showPtt(true);
           } else {
             this.setStatus(`${this.teamNames[other]} — 5-second free shot. Correct answer?`, other);
             showButtons('correct-btn', 'incorrect-btn', 'reveal-btn');
@@ -1060,6 +1175,7 @@
     }
 
     onTossupTimeout() {
+      this.showPtt(false);
       // Record a "no buzz" outcome — neither team attempted, but the round counts
       this._recordAttempt({ team: null, kind: 'tossup', correct: false, response: '(no buzz)' });
       this.revealAnswer();
@@ -1071,6 +1187,7 @@
     }
 
     onBonusTimeout() {
+      this.showPtt(false);
       this._recordAttempt({ team: this.tossupOwner, kind: 'bonus', correct: false, response: '(time)' });
       this.revealAnswer();
       this._explainForCurrent(false, 'bonus');
@@ -1129,10 +1246,10 @@
         await Agent.speakQuestion(round.bonus.question);
         if (this.phase !== 'bonus-pending') return;
         this.setPhase('bonus-reading');
-        this.setStatus(`${this.teamNames[this.tossupOwner]} — listening for answer (20 sec).`);
+        this.setStatus(`${this.teamNames[this.tossupOwner]} — hold to answer (20 sec).`);
         showButtons('correct-btn', 'incorrect-btn', 'reveal-btn');
         this.timer.start(BONUS_SECONDS, () => this.onBonusTimeout());
-        this.runAgentAnswer('bonus');
+        this.showPtt(true);
       } catch (err) {
         console.warn('Agent bonus failed:', err);
       }
@@ -1143,6 +1260,7 @@
         showButtons('correct-btn', 'incorrect-btn', 'reveal-btn');
         return;
       }
+      this._pttListening = true;
       const ms = (kind === 'tossup' ? TOSSUP_SECONDS : BONUS_SECONDS) * 1000;
       this.transcriptEl.classList.remove('hidden');
       this.transcriptEl.innerHTML = '<span class="label">Listening</span>';
@@ -1152,6 +1270,9 @@
           interim: (t) => { this.transcriptEl.innerHTML = `<span class="label">Listening</span><div>${escapeHtml(t)}</div>`; },
         });
         this.timer.stop();
+        this.sttFailures = 0;
+        this._pttListening = false;
+        this.showPtt(false);
         const q = (kind === 'tossup') ? App.rounds[this.roundIdx].tossup : App.rounds[this.roundIdx].bonus;
         this.transcriptEl.innerHTML = `<span class="label">Judging…</span><div>"${escapeHtml(transcript)}"</div>`;
         const verdict = await judgeAnswer(transcript, q);
@@ -1167,6 +1288,9 @@
         else this.onIncorrect();
       } catch (err) {
         const msg = err.message || '';
+        this._pttListening = false;
+        this.showPtt(false);
+        if (msg === 'no-speech' || msg === 'timeout' || /^STT:/.test(msg)) this.sttFailures += 1;
         const isUnavailable = /^STT: (network|not-allowed|service-not-allowed|audio-capture)/.test(msg);
         if (isUnavailable) {
           // Speech recognition unavailable — stop the timer and let the
@@ -1178,8 +1302,36 @@
           console.warn('Agent listen error:', msg);
           this.transcriptEl.innerHTML = `<span class="label">Error</span><div>${escapeHtml(msg)} — please use the manual buttons.</div>`;
         }
+        if (this.sttFailures >= 2) {
+          this.transcriptEl.innerHTML += '<div>Voice had repeated errors. Use manual Correct/Incorrect controls for this round.</div>';
+        }
         showButtons('correct-btn', 'incorrect-btn', 'reveal-btn');
       }
+    }
+
+    bindPttButton() {
+      if (!this.pttBtn) return;
+      const start = (e) => {
+        e.preventDefault();
+        if (!App.agentDriving || this._pttListening) return;
+        if (this.phase !== 'tossup-buzzed' && this.phase !== 'bonus-reading') return;
+        this.pttBtn.classList.add('active');
+        this.runAgentAnswer(this.phase === 'bonus-reading' ? 'bonus' : 'tossup');
+      };
+      const stop = (e) => {
+        e.preventDefault();
+        this.pttBtn.classList.remove('active');
+        if (this._pttListening) Agent.cancel();
+      };
+      this.pttBtn.addEventListener('pointerdown', start);
+      this.pttBtn.addEventListener('pointerup', stop);
+      this.pttBtn.addEventListener('pointerleave', stop);
+      this.pttBtn.addEventListener('pointercancel', stop);
+    }
+
+    showPtt(show) {
+      if (!this.pttBtn) return;
+      this.pttBtn.classList.toggle('hidden', !show || !Agent.isSttSupported());
     }
 
     // -------- Helpers --------
@@ -1204,6 +1356,7 @@
     endMatch() {
       this.timer.stop();
       Agent.cancel();
+      this.showPtt(false);
       document.removeEventListener('keydown', this.bindKeys);
       $('results-two-team').classList.remove('hidden');
       $('results-solo').classList.add('hidden');
@@ -1321,6 +1474,9 @@
       this._lastWasBonus = false;
       this.timer = new Timer($('solo-timer-fill'), $('solo-timer-text'));
       this.transcriptEl = $('agent-transcript-solo');
+      this.pttBtn = $('ptt-btn-solo');
+      this.sttFailures = 0;
+      this._pttListening = false;
       this.bindKeys = (e) => this.onKey(e);
       // History entry per question (toss-up or bonus). Each: {round, kind, question, response, verdict, canonical}
       this.history = [];
@@ -1344,6 +1500,7 @@
       $('solo-override-correct').addEventListener('click', () => this.overrideJudgment(true));
       $('solo-override-incorrect').addEventListener('click', () => this.overrideJudgment(false));
       $('solo-end-btn').addEventListener('click', () => this.endMatch());
+      this.bindPttButton();
       document.addEventListener('keydown', this.bindKeys);
 
       this.loadRound();
@@ -1373,6 +1530,7 @@
       $('solo-response-text').textContent = '';
       $('solo-explanation-panel').classList.add('hidden');
       $('solo-explanation-text').textContent = '';
+      if (this.pttBtn) this.pttBtn.classList.add('hidden');
       this.timer.reset();
       this.hideOverrides();
 
@@ -1421,7 +1579,8 @@
       const secs = this.phase === 'tossup-reading' ? 45 : 45;
       this.timer.start(secs, () => this.onAnswerTimeout());
       if (App.agentDriving && Agent.isSttSupported()) {
-        this.runAgentListen(this.phase === 'tossup-reading' ? 'tossup' : 'bonus');
+        this.setStatus('Hold to answer, or type in the box.', null);
+        this.showPtt(true);
       }
     }
 
@@ -1448,11 +1607,13 @@
       if (this.phase === 'revealed') return;
       this.timer.stop();
       Agent.cancel();
+      this.showPtt(false);
       this.processVerdict({ correct: false, confidence: 1, reason: 'gave up' }, '(skipped)');
     }
 
     onAnswerTimeout() {
       if (this.phase !== 'tossup-reading' && this.phase !== 'bonus-reading') return;
+      this.showPtt(false);
       this.processVerdict({ correct: false, confidence: 1, reason: 'time' }, '(time)');
     }
 
@@ -1466,12 +1627,12 @@
         await Agent.speakQuestion(round.tossup.question);
         if (this.phase !== 'idle') return;
         this.setPhase('tossup-reading');
-        this.setStatus('Listening for your answer…');
+        this.setStatus('Hold to answer, or type in the box.');
         $('solo-answer-wrap').classList.remove('hidden');
         $('solo-answer-input').focus();
         soloShowButtons('solo-reveal-btn');
         this.timer.start(TOSSUP_SECONDS * 3, () => this.onAnswerTimeout());
-        await this.runAgentListen('tossup');
+        this.showPtt(true);
       } catch (err) {
         console.warn('Solo agent toss failed:', err);
       }
@@ -1489,12 +1650,12 @@
         await Agent.speakQuestion(round.bonus.question);
         if (this.phase !== 'bonus-pending') return;
         this.setPhase('bonus-reading');
-        this.setStatus('Listening for your answer…');
+        this.setStatus('Hold to answer, or type in the box.');
         $('solo-answer-wrap').classList.remove('hidden');
         $('solo-answer-input').focus();
         soloShowButtons('solo-reveal-btn');
         this.timer.start(BONUS_SECONDS, () => this.onAnswerTimeout());
-        await this.runAgentListen('bonus');
+        this.showPtt(true);
       } catch (err) {
         console.warn('Solo agent bonus failed:', err);
       }
@@ -1502,6 +1663,7 @@
 
     async runAgentListen(kind) {
       if (!Agent.isSttSupported()) return;
+      this._pttListening = true;
       const ms = (kind === 'tossup' ? TOSSUP_SECONDS * 3 : BONUS_SECONDS) * 1000;
       this.transcriptEl.classList.remove('hidden');
       this.transcriptEl.innerHTML = '<span class="label">Listening</span>';
@@ -1511,6 +1673,9 @@
           interim: (t) => { this.transcriptEl.innerHTML = `<span class="label">Listening</span><div>${escapeHtml(t)}</div>`; },
         });
         if (!transcript.trim()) return;
+        this._pttListening = false;
+        this.showPtt(false);
+        this.sttFailures = 0;
         this.timer.stop();
         $('solo-answer-input').value = transcript;
         const q = (kind === 'tossup') ? App.rounds[this.roundIdx].tossup : App.rounds[this.roundIdx].bonus;
@@ -1520,6 +1685,9 @@
         this.processVerdict(verdict, transcript);
       } catch (err) {
         const msg = err.message || '';
+        this._pttListening = false;
+        this.showPtt(false);
+        if (msg === 'no-speech' || msg === 'timeout' || /^STT:/.test(msg)) this.sttFailures += 1;
         const isUnavailable = /^STT: (network|not-allowed|service-not-allowed|audio-capture)/.test(msg);
         const isBenign = msg === 'no-speech' || msg === 'timeout' || msg === 'aborted';
         if (isUnavailable) {
@@ -1534,10 +1702,41 @@
         } else if (!isBenign) {
           this.transcriptEl.innerHTML = `<span class="label">Error</span><div>${escapeHtml(msg)} — type your answer.</div>`;
         }
+        if (this.sttFailures >= 2) {
+          this.transcriptEl.innerHTML += '<div>Voice had repeated errors. Continue with typed answers for this question.</div>';
+          $('solo-answer-wrap').classList.remove('hidden');
+          $('solo-answer-input').focus();
+        }
       }
     }
 
+    bindPttButton() {
+      if (!this.pttBtn) return;
+      const start = (e) => {
+        e.preventDefault();
+        if (!App.agentDriving || this._pttListening || !Agent.isSttSupported()) return;
+        if (this.phase !== 'tossup-reading' && this.phase !== 'bonus-reading') return;
+        this.pttBtn.classList.add('active');
+        this.runAgentListen(this.phase === 'bonus-reading' ? 'bonus' : 'tossup');
+      };
+      const stop = (e) => {
+        e.preventDefault();
+        this.pttBtn.classList.remove('active');
+        if (this._pttListening) Agent.cancel();
+      };
+      this.pttBtn.addEventListener('pointerdown', start);
+      this.pttBtn.addEventListener('pointerup', stop);
+      this.pttBtn.addEventListener('pointerleave', stop);
+      this.pttBtn.addEventListener('pointercancel', stop);
+    }
+
+    showPtt(show) {
+      if (!this.pttBtn) return;
+      this.pttBtn.classList.toggle('hidden', !show || !Agent.isSttSupported());
+    }
+
     processVerdict(verdict, given) {
+      this.showPtt(false);
       const wasBonus = this.phase === 'bonus-reading';
       this.timer.stop();
       // Lock out further submissions for this question
@@ -1708,6 +1907,7 @@
     endMatch() {
       this.timer.stop();
       Agent.cancel();
+      this.showPtt(false);
       document.removeEventListener('keydown', this.bindKeys);
       $('results-two-team').classList.add('hidden');
       $('results-solo').classList.remove('hidden');

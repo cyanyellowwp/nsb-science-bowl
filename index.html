@@ -60,9 +60,9 @@
           <label class="field">
             <span>Question pool</span>
             <select id="match-source">
-              <option value="all" selected>All available (seed + DOE corpus)</option>
+              <option value="all" selected>All available (seed + external corpus)</option>
               <option value="seed">Seed only (25 hand-curated)</option>
-              <option value="corpus">DOE NSB corpus only (real competition Qs)</option>
+              <option value="corpus">External corpus only (real + imported)</option>
             </select>
             <small id="match-source-info">~133 concepts available</small>
           </label>
@@ -90,6 +90,14 @@
               <option value="all" selected>All years</option>
             </select>
             <small id="match-year-info">Pulled from <a href="https://science.osti.gov/wdts/nsb/Regional-Competitions/Resources/MS-Sample-Questions" target="_blank" rel="noreferrer noopener">DOE NSB MS sample bank</a>.</small>
+          </label>
+          <label class="field">
+            <span>Subject filter (external corpus)</span>
+            <select id="match-subject">
+              <option value="all" selected>All subjects</option>
+              <option value="biology">Biology</option>
+              <option value="physical_science">Physical Science</option>
+            </select>
           </label>
         </div>
       </div>
@@ -211,6 +219,7 @@
       <div class="setup-actions hidden" id="setup-actions">
         <button id="start-btn" class="primary large">Start Match</button>
       </div>
+      <div id="quota-banner" class="quota-banner hidden" role="status" aria-live="polite"></div>
 
       <div class="format-note">
         <h3>NSB Format (per <a href="RULES.md">RULES.md</a>)</h3>
@@ -261,6 +270,7 @@
             <div class="explanation-text" id="tt-explanation-text"></div>
           </div>
           <div class="agent-transcript hidden" id="agent-transcript-tt"></div>
+          <button id="ptt-btn-tt" class="ptt-btn hidden" type="button">🎙 Hold to answer</button>
         </div>
 
         <div class="controls">
@@ -321,6 +331,7 @@
             <div class="explanation-text" id="solo-explanation-text"></div>
           </div>
           <div class="agent-transcript hidden" id="agent-transcript-solo"></div>
+          <button id="ptt-btn-solo" class="ptt-btn hidden" type="button">🎙 Hold to answer</button>
           <div class="answer-input-wrap hidden" id="solo-answer-wrap">
             <input type="text" id="solo-answer-input" placeholder="Type your answer or speak it…" autocomplete="off" />
             <button id="solo-submit-btn" class="primary">Submit</button>

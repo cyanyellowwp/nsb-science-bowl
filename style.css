@@ -309,6 +309,17 @@ kbd {
 .support-line.error { color: var(--danger); }
 .support-line.success { color: var(--success); }
 
+.quota-banner {
+  margin: 14px auto 0;
+  max-width: 920px;
+  border: 1px solid rgba(235, 87, 87, 0.45);
+  background: rgba(235, 87, 87, 0.12);
+  color: #ffd9d5;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+}
+
 /* ---------- LLM Judge panel ---------- */
 .llm-toggle {
   background: linear-gradient(135deg, var(--panel), rgba(176,125,255,0.06));
@@ -815,6 +826,21 @@ button.small { padding: 8px 14px; font-size: 0.85rem; }
   border-radius: 4px;
   font-size: 0.95rem;
 }
+
+.ptt-btn {
+  margin-top: 14px;
+  width: 100%;
+  max-width: 360px;
+  padding: 12px 14px;
+  background: rgba(79, 140, 255, 0.14);
+  border: 1px solid rgba(79, 140, 255, 0.45);
+  color: var(--text);
+  font-weight: 600;
+}
+.ptt-btn.active {
+  background: rgba(79, 140, 255, 0.28);
+  border-color: rgba(79, 140, 255, 0.85);
+}
 .agent-transcript .label {
   font-size: 0.75rem;
   color: var(--accent);
@@ -848,6 +874,14 @@ button.small { padding: 8px 14px; font-size: 0.85rem; }
   gap: 10px;
   justify-content: center;
   margin-bottom: 16px;
+}
+
+#solo-override-correct,
+#solo-override-incorrect,
+#solo-override-correct.small,
+#solo-override-incorrect.small {
+  font-size: 0.95rem;
+  padding: 10px 16px;
 }
 
 .status-line {

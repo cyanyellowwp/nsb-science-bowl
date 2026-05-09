@@ -307,17 +307,20 @@ Now judge the student answer below using these rules. Return ONLY the JSON objec
     async explain(q, studentAnswer, wasCorrect) {
       if (!this.isReady()) return null;
 
-      const systemPrompt = `You are a science tutor for middle-school National Science Bowl practice. Write a clear 2–4 sentence explanation of WHY the canonical answer is correct.
+      const systemPrompt = `You are a science tutor for middle-school National Science Bowl practice. Write a clear explanation of WHY the canonical answer is correct.
 
 STRICT RULES:
 1. Treat the canonical answer as ground truth — do NOT contradict or qualify it.
 2. Use only widely-accepted, textbook-level scientific facts. Do NOT invent specific dates, statistics, or names not commonly known.
 3. If you are uncertain about a specific fact, omit it. A short, factually safe sentence is better than a longer one with a hallucinated detail.
-4. If the student got it WRONG, briefly note where they went off-track (one clause), then explain the canonical answer in 1–2 more sentences.
-5. If the student got it RIGHT, jump straight to the science — explain the underlying concept and one piece of useful context. Do NOT start with words like "Excellent!", "Great!", "Correct!", "Right!" or any other congratulatory preamble. Begin with the explanation directly.
-6. Aim at a middle-school audience. Plain language. No jargon dumps.
-7. Output ONLY the explanation text — no markdown, no quotes around it, no preamble of any kind.
-8. Length target: 60–100 words. Hard cap 150 words. End with proper terminal punctuation (period).`;
+4. Output EXACTLY 2 sentences:
+   - Sentence 1 must explain the mechanism (why the canonical answer is true).
+   - Sentence 2 must provide either (a) a contrast with a likely wrong answer OR (b) one concrete example.
+5. Do NOT restate the question, and do NOT restate the canonical answer verbatim.
+6. Do NOT start with words like "Excellent!", "Great!", "Correct!", "Right!" or any congratulatory preamble.
+7. Aim at a middle-school audience. Plain language. No jargon dumps.
+8. Output ONLY the explanation text — no markdown, no quotes, no preamble.
+9. Length target: 60–100 words. Hard cap 150 words. End with proper terminal punctuation.`;
 
       const userPrompt = [
         `QUESTION: ${q.question}`,
@@ -325,7 +328,7 @@ STRICT RULES:
         `STUDENT_SAID: ${studentAnswer || '(no answer)'}`,
         `STUDENT_WAS_${wasCorrect ? 'CORRECT' : 'INCORRECT'}.`,
         '',
-        'Write the explanation now. Begin directly with the science — do not start with a congratulatory word.',
+        'Write the explanation now in exactly two sentences following the strict format.',
       ].join('\n');
 
       try {

@@ -38,9 +38,9 @@ done
 # ---------- JSON validity ----------
 echo ""
 echo "🔍 Validating JSON banks..."
-for f in questions.json corpus-doe.json; do
+for f in questions.json corpus-doe.json content-sources.json; do
   if [ -f "$f" ]; then
-    python3 -c "import json; d=json.load(open('$f')); print(f'  ✓ $f — {len(d.get(\"concepts\", d.get(\"rounds\", [])))} concepts/rounds')"
+    python3 -c "import json; d=json.load(open('$f')); print(f'  ✓ $f — {len(d.get(\"concepts\", d.get(\"rounds\", d.get(\"sources\", []))))} concepts/rounds/sources')"
   fi
 done
 

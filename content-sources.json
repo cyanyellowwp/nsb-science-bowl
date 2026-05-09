@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": "corpus",
+      "label": "DOE NSB corpus",
+      "path": "corpus-doe.json",
+      "enabled": true
+    }
+  ]
+}
