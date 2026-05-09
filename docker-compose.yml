@@ -1,0 +1,10 @@
+services:
+  nsb-quiz:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nsb-quiz-practice:local
+    container_name: nsb-quiz-practice
+    ports:
+      - "8766:8766"
+    restart: unless-stopped
