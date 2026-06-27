@@ -102,7 +102,7 @@
         Progress.recordAttempt(id, { concept_id: 'A', category: 'X', phase: 'tossup', correct: true });
         Progress.endMatch(id, { final_score: 4 });
         const bank = [{ id: 'A', category: 'X' }, { id: 'B', category: 'X' }, { id: 'C', category: 'X' }];
-        const all = Progress.concceptsWithBank(bank);
+        const all = Progress.conceptsWithBank(bank);
         T.assertEqual(all.length, 3);
         const untouched = all.filter((c) => c.mastery === 'untouched').map((c) => c.concept_id).sort();
         T.assertEqual(untouched, ['B', 'C']);

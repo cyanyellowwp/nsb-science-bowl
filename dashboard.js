@@ -124,7 +124,7 @@
 
     renderMastery(filter) {
       const bank = (window.QuestionBank && window.QuestionBank.concepts) ? window.QuestionBank.concepts : [];
-      let concepts = Progress.concceptsWithBank(bank);
+      let concepts = Progress.conceptsWithBank(bank);
 
       // Counts for tab labels
       const counts = { all: concepts.length, mastered: 0, learning: 0, needs_work: 0, struggling: 0, untouched: 0 };

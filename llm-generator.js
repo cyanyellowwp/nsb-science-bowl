@@ -109,7 +109,7 @@
       const perConcept = opts.perConcept || 1;
       const maxConcepts = opts.maxConcepts || 5;
       const bankConcepts = (window.QuestionBank && window.QuestionBank.concepts) || [];
-      const stats = window.Progress ? Progress.concceptsWithBank(bankConcepts) : [];
+      const stats = window.Progress ? Progress.conceptsWithBank(bankConcepts) : [];
       // Pick targets: needs_work + struggling + untouched, prioritizing "seen but missed"
       const order = { needs_work: 0, struggling: 1, untouched: 2, learning: 3, mastered: 4 };
       const targets = stats

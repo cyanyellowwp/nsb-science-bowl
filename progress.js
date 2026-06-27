@@ -213,7 +213,7 @@
      * Cross-reference with the loaded question bank to surface concepts the
      * kid has never attempted (so the dashboard can show "untouched" too).
      */
-    concceptsWithBank(bankConcepts) {
+    conceptsWithBank(bankConcepts) {
       const stats = new Map(this.accuracyByConcept().map((c) => [c.concept_id, c]));
       for (const c of bankConcepts || []) {
         if (!stats.has(c.id)) {
