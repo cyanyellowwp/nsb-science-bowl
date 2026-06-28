@@ -20,12 +20,12 @@
     mode: null,            // 'two-team' | 'solo'
     agentEnabled: false,
     agentDriving: false,
+    reviewGate: true,        // moderator reviews/rewords a spoken answer before it's judged/scored
     matchOpts: {           // chosen on setup; consumed by buildRoundsFromBank
       source: 'all',       // 'seed' | 'corpus' | 'all'
       length: 25,
-      topic: 'all',        // 'all' | 'ch1' | 'ch2' | 'doe-corpus'
+      topic: 'all',        // 'all' | 'biology' | 'physics_chemistry' | 'math' | 'earth_space'
       year: 'all',         // 'all' | '2015' .. '2022'
-      subject: 'all',      // 'all' | 'biology' | 'physical_science'
     },
     game: null,
   };
@@ -86,13 +86,20 @@
         concepts.push({
           ...c,
           subject: c.subject || inferSubject(c),
+          nsbCategory: c.nsbCategory || inferNsbCategory(c),
           _source: src.id || 'corpus',
         });
       }
     }
     // Merge any LLM-generated variants the user has accumulated locally
     if (window.Generator) {
-      for (const c of Generator.getCachedConcepts()) concepts.push({ ...c, _source: 'generated' });
+      for (const c of Generator.getCachedConcepts()) {
+        concepts.push({
+          ...c,
+          nsbCategory: c.nsbCategory || inferNsbCategory(c),
+          _source: 'generated',
+        });
+      }
     }
     return {
       schema_version: '2.0',
@@ -129,8 +136,41 @@
   }
 
   function inferSubject(concept) {
-    const hay = `${concept.category || ''} ${(concept.tags || []).join(' ')}`.toLowerCase();
-    return hay.includes('physical') ? 'physical_science' : 'biology';
+    const hay = `${concept.subject || ''} ${concept.category || ''} ${concept.subcategory || ''} ${(concept.tags || []).join(' ')}`.toLowerCase();
+    if (hay.includes('physics') || hay.includes('chemistry') || hay.includes('physical_science') || hay.includes('physical science')) {
+      return 'physical_science';
+    }
+    if (hay.includes('math')) return 'math';
+    if (hay.includes('earth') || hay.includes('space')) return 'earth_space';
+    return 'biology';
+  }
+
+  function inferNsbCategory(concept) {
+    const hay = `${concept.subject || ''} ${concept.category || ''} ${concept.subcategory || ''} ${(concept.tags || []).join(' ')}`.toLowerCase();
+    if (hay.includes('biology') || hay.includes('life science')) return 'biology';
+    if (hay.includes('physics') || hay.includes('chemistry') || hay.includes('physical_science') || hay.includes('physical science')) return 'physics_chemistry';
+    if (hay.includes('math')) return 'math';
+    if (hay.includes('earth') || hay.includes('space')) return 'earth_space';
+    return 'biology';
+  }
+
+  function matchesNsbCategory(concept, value) {
+    if (!value || value === 'all') return true;
+    return (concept.nsbCategory || inferNsbCategory(concept)) === value;
+  }
+
+  /**
+   * Filter a concept pool by the selected source key.
+   *   'all'    → everything
+   *   'seed'   → hand-curated seed only
+   *   'corpus' → everything except seed (legacy meaning)
+   *   <id>     → only concepts from that content source (e.g. 'grade5')
+   */
+  function filterBySource(pool, source) {
+    if (source === 'seed') return pool.filter((c) => c._source === 'seed');
+    if (source === 'corpus') return pool.filter((c) => c._source !== 'seed');
+    if (source && source !== 'all') return pool.filter((c) => c._source === source);
+    return pool;
   }
 
   /**
@@ -182,23 +222,16 @@
     const source = opts.source || 'all';
     const topic = opts.topic || 'all';
     const year = opts.year || 'all';
-    const subject = opts.subject || 'all';
 
-    let pool = bank.concepts.slice();
-
-    if (source === 'seed') pool = pool.filter((c) => c._source === 'seed');
-    if (source === 'corpus') pool = pool.filter((c) => c._source !== 'seed');
+    let pool = filterBySource(bank.concepts.slice(), source);
 
     if (topic !== 'all') {
-      pool = pool.filter((c) => Array.isArray(c.tags) && c.tags.includes(topic));
+      pool = pool.filter((c) => matchesNsbCategory(c, topic));
     }
 
     // Year filter — applies only to corpus concepts (which have a `source.year` and a year tag)
     if (year !== 'all') {
       pool = pool.filter((c) => Array.isArray(c.tags) && c.tags.includes(year));
-    }
-    if (subject !== 'all') {
-      pool = pool.filter((c) => (c.subject || inferSubject(c)) === subject);
     }
 
     if (!pool.length) {
@@ -275,10 +308,19 @@
       }
     });
 
+    // Moderator review gate — defaults on (checkbox is `checked` in markup).
+    const reviewCheck = $('agent-review-gate');
+    if (reviewCheck) {
+      App.reviewGate = reviewCheck.checked;
+      reviewCheck.addEventListener('change', () => { App.reviewGate = reviewCheck.checked; });
+    }
+
     bindVoiceControls();
     bindLlmConfig();
 
     $('start-btn').addEventListener('click', startMatch);
+    const weakBtn = $('solo-weak-btn');
+    if (weakBtn) weakBtn.addEventListener('click', startWeakTopicsMatch);
     $('restart-btn').addEventListener('click', () => location.reload());
     const setupDashBtn = $('setup-dashboard-btn');
     if (setupDashBtn) setupDashBtn.addEventListener('click', () => Dashboard.show());
@@ -341,6 +383,86 @@
     $('agent-voice-info').textContent = `Selected: ${v.name} · ${tag}`;
   }
 
+  /**
+   * Microphone diagnostic. Separates the two things that can break voice input:
+   *   (a) mic hardware / browser permission  → tested with getUserMedia + a live
+   *       level meter so you can SEE the mic respond to your voice, and
+   *   (b) speech recognition (Chrome → Google) → tested with Agent.listen().
+   * Reports the exact failure so it's actionable.
+   */
+  async function testMicrophone(out) {
+    const set = (msg, cls) => { out.textContent = msg; out.className = 'support-line' + (cls ? ' ' + cls : ''); };
+
+    if (!Agent.isSttSupported()) {
+      set('❌ This browser can\'t do speech recognition. Use Chrome or Edge on a computer (Safari/Firefox won\'t work for spoken answers).', 'error');
+      return;
+    }
+    const localOk = ['localhost', '127.0.0.1'].includes(location.hostname);
+    if (!window.isSecureContext && !localOk) {
+      set(`⚠️ The mic needs a secure page (https:// or localhost). This page is "${location.protocol}//${location.hostname}", so the browser will block it. Open the app via http://localhost:3000/ or deploy over https.`, 'warn');
+      return;
+    }
+
+    // (a) Request the mic and show a 3-second level meter.
+    set('🎤 Requesting microphone… allow access if the browser asks.');
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      const n = e && e.name;
+      if (n === 'NotAllowedError' || n === 'SecurityError') set('❌ Microphone permission is blocked. Click the 🔒 (or camera/mic) icon in the address bar, allow the microphone for this site, then retry.', 'error');
+      else if (n === 'NotFoundError' || n === 'OverconstrainedError' || n === 'DevicesNotFoundError') set('❌ No microphone was found. Connect a mic (or check your computer\'s sound input settings) and retry.', 'error');
+      else set('❌ Could not open the microphone: ' + ((e && e.message) || n || 'unknown error'), 'error');
+      return;
+    }
+
+    let peak = 0;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const ac = new Ctx();
+      const node = ac.createMediaStreamSource(stream);
+      const analyser = ac.createAnalyser();
+      analyser.fftSize = 512;
+      node.connect(analyser);
+      const buf = new Uint8Array(analyser.fftSize);
+      const t0 = performance.now();
+      await new Promise((resolve) => {
+        const tick = () => {
+          analyser.getByteTimeDomainData(buf);
+          let max = 0;
+          for (let i = 0; i < buf.length; i++) max = Math.max(max, Math.abs(buf[i] - 128));
+          peak = Math.max(peak, max);
+          const level = Math.max(0, Math.min(20, Math.round((max / 60) * 20)));
+          out.className = 'support-line';
+          out.textContent = '🎤 Say something! Level: [' + '█'.repeat(level) + '░'.repeat(20 - level) + ']';
+          if (performance.now() - t0 < 3000) requestAnimationFrame(tick); else resolve();
+        };
+        tick();
+      });
+      try { ac.close(); } catch (_) {}
+    } catch (_) { /* AudioContext unavailable — skip the meter */ }
+    stream.getTracks().forEach((t) => t.stop());
+
+    if (peak < 4) {
+      set('⚠️ The mic opened but I barely heard any sound. Make sure the right microphone is selected and not muted, then retry (or speak louder/closer).', 'warn');
+      return;
+    }
+
+    // (b) Now test the speech recognizer itself.
+    set('✅ Mic is picking up sound. 🗣️ Now say a word or two for the recognizer…');
+    try {
+      const heard = await Agent.listen({ timeoutMs: 6000, maxMs: 9000, interim: (t) => set('🗣️ Hearing: "' + t + '"…') });
+      if (heard && heard.trim()) set('✅ All set! Mic works and I heard: "' + heard.trim() + '"', 'success');
+      else set('⚠️ Your mic works (sound detected), but the recognizer didn\'t catch words. Speak clearly and retry.', 'warn');
+    } catch (e) {
+      const msg = (e && e.message) || '';
+      if (/not-allowed|service-not-allowed/.test(msg)) set('❌ Speech recognition was blocked. Allow the microphone for this site and retry.', 'error');
+      else if (/no-speech/.test(msg)) set('⚠️ Your mic works (sound detected), but no speech was recognized. Speak a bit louder/closer and retry.', 'warn');
+      else if (/network/.test(msg)) set('❌ Speech recognition needs the internet (Chrome sends audio to Google to transcribe). Check your connection and retry.', 'error');
+      else set('⚠️ Mic works, but recognition errored: ' + msg + '. You can still type answers.', 'warn');
+    }
+  }
+
   function bindVoiceControls() {
     const sel = $('agent-voice');
     const rate = $('agent-rate');
@@ -363,6 +485,10 @@
       Agent.setRate(rate.value);
       rateValue.textContent = Number(rate.value).toFixed(2) + '×';
     });
+
+    const testMic = $('agent-test-mic-btn');
+    const micResult = $('agent-mic-result');
+    if (testMic && micResult) testMic.addEventListener('click', () => testMicrophone(micResult));
 
     test.addEventListener('click', async () => {
       Agent.cancel();
@@ -655,7 +781,6 @@
     updateAgentSupport();
     updateSourceInfo();
     populateYearDropdown();
-    populateSubjectDropdown();
     bindMatchOptionsListeners();
   }
 
@@ -686,25 +811,10 @@
       years.map(([y, n]) => `<option value="${y}">${y} (${n} pair${n === 1 ? '' : 's'})</option>`).join('');
   }
 
-  function populateSubjectDropdown() {
-    const sel = $('match-subject');
-    if (!sel || !App.bank) return;
-    const counts = { biology: 0, physical_science: 0 };
-    for (const c of App.bank.concepts) {
-      if (c._source === 'seed') continue;
-      const s = c.subject || inferSubject(c);
-      if (s === 'biology' || s === 'physical_science') counts[s] += 1;
-    }
-    sel.innerHTML =
-      `<option value="all" selected>All subjects (${counts.biology + counts.physical_science})</option>` +
-      `<option value="biology">Biology (${counts.biology})</option>` +
-      `<option value="physical_science">Physical Science (${counts.physical_science})</option>`;
-  }
-
   /** When the user changes a match option, update the live count hint. */
   function bindMatchOptionsListeners() {
     const upd = () => updateMatchCount();
-    ['match-source', 'match-topic', 'match-year', 'match-subject', 'match-length'].forEach((id) => {
+    ['match-source', 'match-topic', 'match-year', 'match-length'].forEach((id) => {
       const el = $(id);
       if (el && !el.dataset.bound) {
         el.addEventListener('change', upd);
@@ -721,16 +831,12 @@
       source: ($('match-source') || {}).value || 'all',
       topic: ($('match-topic') || {}).value || 'all',
       year: ($('match-year') || {}).value || 'all',
-      subject: ($('match-subject') || {}).value || 'all',
       length: parseInt(($('match-length') || {}).value, 10) || 25,
     };
     // Mirror the filter logic without shuffling/slicing
-    let pool = App.bank.concepts.slice();
-    if (opts.source === 'seed') pool = pool.filter((c) => c._source === 'seed');
-    if (opts.source === 'corpus') pool = pool.filter((c) => c._source !== 'seed');
-    if (opts.topic !== 'all') pool = pool.filter((c) => Array.isArray(c.tags) && c.tags.includes(opts.topic));
+    let pool = filterBySource(App.bank.concepts.slice(), opts.source);
+    if (opts.topic !== 'all') pool = pool.filter((c) => matchesNsbCategory(c, opts.topic));
     if (opts.year !== 'all') pool = pool.filter((c) => Array.isArray(c.tags) && c.tags.includes(opts.year));
-    if (opts.subject !== 'all') pool = pool.filter((c) => (c.subject || inferSubject(c)) === opts.subject);
 
     // Compute rotation breakdown
     const seen = getSeenMap();
@@ -742,13 +848,22 @@
 
     const info = $('match-year-info');
     if (info) {
-      const breakdown = seenCount > 0
+      const categoryLabel = opts.topic === 'all'
+        ? 'all categories'
+        : opts.topic === 'biology'
+          ? 'biology'
+          : opts.topic === 'physics_chemistry'
+            ? 'physics/chemistry'
+            : opts.topic === 'math'
+              ? 'math'
+              : 'earth and space science';
+    const breakdown = seenCount > 0
         ? `${unseenCount} unseen · ${seenCount} previously seen`
         : `${unseenCount} unseen`;
       const matchPlan = willPlaySeen > 0
         ? `${willPlayUnseen} new + ${willPlaySeen} review`
         : `${willPlayUnseen} new`;
-      info.innerHTML = `Pool: <strong>${pool.length}</strong> (${breakdown}). ` +
+      info.innerHTML = `Pool: <strong>${pool.length}</strong> in <strong>${categoryLabel}</strong> (${breakdown}). ` +
         `This match: <strong>${matchPlan}</strong>. ` +
         `<a href="https://science.osti.gov/wdts/nsb/Regional-Competitions/Resources/MS-Sample-Questions" target="_blank" rel="noreferrer noopener">DOE source</a>`;
     }
@@ -779,8 +894,10 @@
       };
     }
 
-    // Tier 2: rule-based was uncertain — escalate to LLM if available
-    if (window.LLMJudge && LLMJudge.isReady()) {
+    // Tier 2: rule-based was uncertain — escalate to LLM if available and under budget
+    if (window.LLMJudge && LLMJudge.enabled && LLMJudge.overBudget && LLMJudge.overBudget()) {
+      showQuotaBanner(LLMJudge.budgetNotice());
+    } else if (window.LLMJudge && LLMJudge.isReady()) {
       try {
         hideQuotaBanner();
         const llmResult = await LLMJudge.judge(spoken, q);
@@ -936,9 +1053,51 @@
 
   function maybeShowQuotaBanner(err) {
     const msg = String((err && err.message) || err || '');
+    if ((err && err.code === 'BUDGET_EXCEEDED') || /spend cap/i.test(msg)) {
+      showQuotaBanner(msg);
+      return;
+    }
     if (!/\bAPI 429\b/i.test(msg)) return;
     showQuotaBanner('Free quota hit for LLM requests. Judging/explanations are using fallback behavior. Switch model or add a different provider key in setup.');
   }
+
+  const BuzzerAudio = {
+    ctx: null,
+
+    ensureContext() {
+      if (typeof window === 'undefined') return null;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      if (!this.ctx) this.ctx = new AC();
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+      return this.ctx;
+    },
+
+    play(team) {
+      const ctx = this.ensureContext();
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+      const isTeam1 = team === 1;
+      osc.type = isTeam1 ? 'square' : 'triangle';
+      osc.frequency.setValueAtTime(isTeam1 ? 880 : 587.33, now);
+      osc.frequency.exponentialRampToValueAtTime(isTeam1 ? 659.25 : 440, now + 0.11);
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(isTeam1 ? 1800 : 1400, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.16, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    },
+  };
 
   // ---------------- Match start ----------------
   function startMatch() {
@@ -951,12 +1110,12 @@
     const srcSel = $('match-source');
     const topSel = $('match-topic');
     const yearSel = $('match-year');
-    const subjectSel = $('match-subject');
     if (lenSel) App.matchOpts.length = parseInt(lenSel.value, 10) || 25;
     if (srcSel) App.matchOpts.source = srcSel.value || 'all';
     if (topSel) App.matchOpts.topic = topSel.value || 'all';
     if (yearSel) App.matchOpts.year = yearSel.value || 'all';
-    if (subjectSel) App.matchOpts.subject = subjectSel.value || 'all';
+    const deferEl = $('solo-defer-review');
+    App.matchOpts.deferReview = !!(deferEl && deferEl.checked);
     // Build a fresh randomized round list for this match
     App.rounds = buildRoundsFromBank(App.bank, App.matchOpts);
     if (!App.rounds.length) {
@@ -972,6 +1131,87 @@
     } else {
       App.game = new SoloGame();
     }
+    App.game.start();
+  }
+
+  /**
+   * Build a focused round list from the kid's weak concepts. For each concept
+   * it prefers a freshly-generated variant (tagged with the original concept id)
+   * and falls back to the original question, but always tracks the round under
+   * the ORIGINAL concept id so the dashboard mastery for that topic updates.
+   */
+  function buildWeakTopicsRounds(weakIds, length) {
+    const rounds = [];
+    for (const cid of weakIds.slice(0, length)) {
+      const orig = App.bank.concepts.find((c) => c.id === cid);
+      const gens = App.bank.concepts.filter((c) => c._source === 'generated' && Array.isArray(c.tags) && c.tags.includes(cid));
+      const pick = gens.length ? gens[gens.length - 1] : orig;
+      if (!pick) continue;
+      const tu = pickRandom(pick.tossup_variants);
+      const bonusPool = (pick.bonus_variants && pick.bonus_variants.length) ? pick.bonus_variants : ((orig && orig.bonus_variants) || []);
+      const bo = pickRandom(bonusPool);
+      if (!tu || !bo) continue;
+      rounds.push({
+        id: rounds.length + 1,
+        conceptId: cid,
+        category: (orig || pick).category,
+        subcategory: (orig || pick).subcategory || null,
+        tags: (orig || pick).tags || [],
+        source: 'weak-review',
+        tossup: tu,
+        bonus: bo,
+      });
+    }
+    return shuffle(rounds);
+  }
+
+  /**
+   * "Practice my weak topics": pull the all-time weak concepts from history
+   * (most-missed first), regenerate fresh variants for them when the LLM is
+   * available (falling back to existing questions), then start a focused solo
+   * match scored against the same concepts so progress is comparable over time.
+   */
+  async function startWeakTopicsMatch() {
+    const out = $('solo-weak-status');
+    const set = (m, cls) => { if (out) { out.textContent = m; out.className = 'support-line' + (cls ? ' ' + cls : ''); } };
+    if (!App.bank) { set('Question bank still loading — try again in a moment.', 'warn'); return; }
+
+    const stats = window.Progress ? Progress.conceptsWithBank(App.bank.concepts) : [];
+    let weak = stats
+      .filter((c) => c.mastery === 'struggling' || c.mastery === 'needs_work')
+      .sort((a, b) => (a.accuracy - b.accuracy) || (b.attempts - a.attempts));
+    if (!weak.length) {
+      set('No weak topics yet — finish a practice test first, then this will drill the ones you missed.', 'warn');
+      return;
+    }
+    const length = parseInt(($('match-length') || {}).value, 10) || 10;
+    weak = weak.slice(0, length);
+    const weakIds = weak.map((w) => w.concept_id);
+
+    // Fresh variants, falling back to the existing questions.
+    if (window.LLMJudge && LLMJudge.isReady() && window.Generator) {
+      set(`🔄 Writing fresh re-phrasings for ${weakIds.length} weak topic(s)… (uses the LLM, within the daily cap)`);
+      try {
+        await Generator.generateForWeakConcepts(
+          { maxConcepts: weakIds.length, perConcept: 1 },
+          (p) => { if (p.phase === 'concept') set(`🔄 Fresh variant ${p.conceptIndex} of ${p.conceptTotal}…`); }
+        );
+        refreshBank();
+      } catch (e) {
+        set(`Couldn't generate fresh variants (${e.message || e}) — using your existing questions for these topics.`, 'warn');
+      }
+    } else {
+      set('Tip: enable the LLM Judge for fresh re-phrasings. Using existing questions for now.', 'warn');
+    }
+
+    App.rounds = buildWeakTopicsRounds(weakIds, length);
+    if (!App.rounds.length) { set('Could not build a quiz from your weak topics.', 'error'); return; }
+
+    App.mode = 'solo';
+    App.matchOpts.deferReview = !!($('solo-defer-review') && $('solo-defer-review').checked);
+    App.agentDriving = App.agentEnabled && Agent.isTtsSupported();
+    showScreen('game-solo');
+    App.game = new SoloGame();
     App.game.start();
   }
 
@@ -996,6 +1236,8 @@
       this.buzzedTeam = null;
       this.tossupOwner = null;
       this.teamsTriedTossup = new Set();
+      this.currentTossupWasInterrupt = false;
+      this.pendingRereadTeam = null;
       this._lastWasBonus = false;
       this.timer = new Timer($('timer-fill'), $('timer-text'));
       this.transcriptEl = $('agent-transcript-tt');
@@ -1015,6 +1257,11 @@
 
       // Wire buttons
       $('read-btn').addEventListener('click', () => this.onReadClick());
+      $('judge-btn').addEventListener('click', () => this.onJudgeReviewed());
+      // Keep the recorded/explained response in sync with moderator edits.
+      $('tt-answer-input').addEventListener('input', () => {
+        $('tt-response-text').textContent = $('tt-answer-input').value;
+      });
       $('correct-btn').addEventListener('click', () => this.onCorrect());
       $('incorrect-btn').addEventListener('click', () => this.onIncorrect());
       $('reveal-btn').addEventListener('click', () => this.revealAnswer());
@@ -1036,6 +1283,8 @@
       this.buzzedTeam = null;
       this.tossupOwner = null;
       this.teamsTriedTossup = new Set();
+      this.currentTossupWasInterrupt = false;
+      this.pendingRereadTeam = null;
       this._lastWasBonus = false;
 
       $('question-type').textContent = formatType('Toss-up', round.tossup);
@@ -1049,18 +1298,22 @@
       $('tt-response-display').classList.add('hidden');
       $('tt-response-display').className = 'response-display hidden';
       $('tt-response-text').textContent = '';
+      $('tt-answer-review').classList.add('hidden');
+      $('tt-answer-input').value = '';
       $('tt-explanation-panel').classList.add('hidden');
       $('tt-explanation-text').textContent = '';
       if (this.pttBtn) this.pttBtn.classList.add('hidden');
       this.timer.reset();
+      this.clearDecisionBanner();
+      this.updateHostDisplay();
 
       if (App.agentDriving) {
         showButtons();
         this.runAgentToss();
       } else {
         showButtons('read-btn');
-        $('read-btn').textContent = 'Read Toss-up';
-        this.setStatus(`Round ${this.roundIdx + 1}: Toss-up — either team may buzz.`);
+        $('read-btn').textContent = 'Begin Toss-up Reading (R)';
+        this.setStatus(`Round ${this.roundIdx + 1}: read the toss-up aloud. Interrupts can buzz before the question is fully read.`);
       }
     }
 
@@ -1069,10 +1322,19 @@
       if (this.phase === 'idle') {
         $('question-text').textContent = round.tossup.question;
         $('question-type').textContent = formatType('Toss-up', round.tossup) + ` · ${TOSSUP_POINTS} pts`;
+        this.setPhase('tossup-reading-early');
+        showButtons('read-btn');
+        $('read-btn').textContent = 'Question Fully Read (R)';
+        this.setStatus('Read the toss-up aloud. A/L = interrupt buzz before the question is fully read.');
+      } else if (this.phase === 'tossup-reading-early') {
         this.setPhase('tossup-reading');
-        showButtons();
-        this.setStatus('Buzz: A (Team 1) or L (Team 2)');
+        showButtons('reveal-btn');
+        // Start the NSB buzz window. A buzz (handleBuzz) stops this timer; if it
+        // expires with no buzz, onTossupTimeout reveals the answer and advances.
         this.timer.start(TOSSUP_SECONDS, () => this.onTossupTimeout());
+        this.setStatus('Question fully read. Wait for the buzz app, then press A (Team 1) or L (Team 2).');
+      } else if (this.phase === 'tossup-reread-pending') {
+        this.startInterruptReread(false);
       } else if (this.phase === 'bonus-pending') {
         $('question-text').textContent = round.bonus.question;
         $('question-type').textContent = formatType('Bonus', round.bonus) + ` · ${BONUS_POINTS} pts`;
@@ -1086,40 +1348,56 @@
 
     onKey(e) {
       if (!$('game-two-team').classList.contains('active')) return;
-      if (this.phase !== 'tossup-reading') return;
+      const tag = (e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '');
+      if (['input', 'textarea', 'select'].includes(tag)) return;
       const k = e.key.toLowerCase();
-      if (k === 'a') this.handleBuzz(1);
-      else if (k === 'l') this.handleBuzz(2);
+      if (['tossup-reading-early', 'tossup-reading'].includes(this.phase)) {
+        if (k === 'a') { e.preventDefault(); this.handleBuzz(1); return; }
+        if (k === 'l') { e.preventDefault(); this.handleBuzz(2); return; }
+      }
+      if (k === 'r') { e.preventDefault(); clickVisibleButton('read-btn'); return; }
+      if (k === 'g') { e.preventDefault(); clickVisibleButton('judge-btn'); return; }
+      if (k === 'c') { e.preventDefault(); clickVisibleButton('correct-btn'); return; }
+      if (k === 'x') { e.preventDefault(); clickVisibleButton('incorrect-btn'); return; }
+      if (k === 'v') { e.preventDefault(); clickVisibleButton('reveal-btn'); return; }
+      if (k === 'n') { e.preventDefault(); clickVisibleButton('next-btn'); }
     }
 
     handleBuzz(team) {
       if (this.teamsTriedTossup.has(team)) return;
+      const wasInterrupt = this.phase === 'tossup-reading-early';
       this.timer.stop();
-      Agent.cancel(); // stop any TTS in progress (interrupt model is acknowledged in RULES.md as future work)
+      Agent.cancel();
+      BuzzerAudio.play(team);
       this.buzzedTeam = team;
       this.teamsTriedTossup.add(team);
+      this.currentTossupWasInterrupt = wasInterrupt;
       this.setPhase('tossup-buzzed');
       this.flashTeam(team);
       if (App.agentDriving) {
-        this.setStatus(`${this.teamNames[team]} buzzed. Hold to answer.`, team);
-        this.showPtt(true);
+        this.setStatus(`${this.teamNames[team]} ${wasInterrupt ? 'interrupted' : 'buzzed'}. Listening for their answer now…`, team);
+        this.promptAgentAnswer('tossup', { autoStart: true });
       } else {
-        this.setStatus(`${this.teamNames[team]} buzzed in. Did they answer correctly?`, team);
+        this.setStatus(`${this.teamNames[team]} ${wasInterrupt ? 'interrupted before the question was fully read' : 'buzzed in after the full read'}. Did they answer correctly?`, team);
         showButtons('correct-btn', 'incorrect-btn', 'reveal-btn');
       }
     }
 
     onCorrect() {
       this.showPtt(false);
-      if (this.phase === 'tossup-buzzed') {
+      this.clearDecisionBanner();
+      $('tt-answer-review').classList.add('hidden');
+      if (this.phase === 'tossup-buzzed' || this.phase === 'tossup-reread-answering') {
         this.addScore(this.buzzedTeam, TOSSUP_POINTS);
         this.tossupOwner = this.buzzedTeam;
         this._recordAttempt({ team: this.buzzedTeam, kind: 'tossup', correct: true, response: $('tt-response-text').textContent.trim() });
         this.revealAnswer();
         this._explainForCurrent(true, 'tossup');
+        this.currentTossupWasInterrupt = false;
+        this.pendingRereadTeam = null;
         this.setPhase('bonus-pending');
         showButtons('read-btn', 'next-btn');
-        $('read-btn').textContent = 'Read Bonus';
+        $('read-btn').textContent = 'Read Bonus (R)';
         this.setStatus(`${this.teamNames[this.tossupOwner]} earned ${TOSSUP_POINTS} pts. Bonus is theirs.`);
         if (App.agentDriving) this.runAgentBonus();
       } else if (this.phase === 'bonus-reading') {
@@ -1137,12 +1415,27 @@
 
     onIncorrect() {
       this.showPtt(false);
+      this.clearDecisionBanner();
+      $('tt-answer-review').classList.add('hidden');
       if (this.phase === 'tossup-buzzed') {
-        // Record the wrong-answer attempt for the team that just buzzed
         this._recordAttempt({ team: this.buzzedTeam, kind: 'tossup', correct: false, response: $('tt-response-text').textContent.trim() });
         const other = this.buzzedTeam === 1 ? 2 : 1;
         this.clearTeamFlash();
-        if (this.teamsTriedTossup.has(other)) {
+        if (this.currentTossupWasInterrupt) {
+          // Interrupt + wrong answer: the opponent gets the toss-up re-read in
+          // full and answers it. Points are awarded ONLY if they answer the
+          // re-read correctly (handled in onCorrect) — there is no automatic
+          // interrupt award. (Previously added +4 here AND +4 on a correct
+          // re-read, double-counting to +8.)
+          this.pendingRereadTeam = other;
+          this.buzzedTeam = other;
+          this.currentTossupWasInterrupt = false;
+          this.setPhase('tossup-reread-pending');
+          showButtons('read-btn', 'reveal-btn');
+          $('read-btn').textContent = `Re-read for ${this.teamNames[other]} (R)`;
+          this.setStatus(`${this.teamNames[other]} gets the toss-up. Re-read it in full; they answer for ${TOSSUP_POINTS} points.`, other, 'warn');
+          if (App.agentDriving) this.startInterruptReread(true);
+        } else if (this.teamsTriedTossup.has(other)) {
           this.revealAnswer();
           this._explainForCurrent(false, 'tossup');
           this.setPhase('revealed');
@@ -1153,15 +1446,24 @@
           this.buzzedTeam = other;
           this.setPhase('tossup-buzzed');
           this.flashTeam(other);
-          this.timer.start(FREESHOT_SECONDS, () => this.onIncorrect());
+          this.timer.reset();
           if (App.agentDriving) {
-            this.setStatus(`${this.teamNames[other]} — your free shot. Hold to answer.`, other);
-            this.showPtt(true);
+            this.setStatus(`${this.teamNames[other]} — your free shot. Listening for their answer now…`, other);
+            this.promptAgentAnswer('tossup', { autoStart: true });
           } else {
-            this.setStatus(`${this.teamNames[other]} — 5-second free shot. Correct answer?`, other);
+            this.setStatus(`${this.teamNames[other]} gets the free shot. Judge their answer when they respond.`, other);
             showButtons('correct-btn', 'incorrect-btn', 'reveal-btn');
           }
         }
+      } else if (this.phase === 'tossup-reread-answering') {
+        this._recordAttempt({ team: this.buzzedTeam, kind: 'tossup', correct: false, response: $('tt-response-text').textContent.trim() });
+        this.revealAnswer();
+        this._explainForCurrent(false, 'tossup');
+        this.pendingRereadTeam = null;
+        this.setPhase('revealed');
+        this.setStatus(`${this.teamNames[this.buzzedTeam]} missed the re-read toss-up. No bonus.`, null, 'danger');
+        showButtons('next-btn');
+        if (App.agentDriving) Agent.speak('Incorrect. The correct answer was: ' + plainAnswer(App.rounds[this.roundIdx].tossup));
       } else if (this.phase === 'bonus-reading') {
         this._recordAttempt({ team: this.tossupOwner, kind: 'bonus', correct: false, response: $('tt-response-text').textContent.trim() });
         this.timer.stop();
@@ -1220,16 +1522,53 @@
         if (this.phase !== 'idle') return;
         $('question-text').textContent = round.tossup.question;
         $('question-type').textContent = formatType('Toss-up', round.tossup) + ` · ${TOSSUP_POINTS} pts`;
+        this.setPhase('tossup-reading-early');
+        this.setStatus('Buzz anytime during the read for an interrupt. After the full read, wait for the buzz app and press A or L.');
         await Agent.speakQuestion(round.tossup.question);
-        if (this.phase !== 'idle') return;
+        if (this.phase !== 'tossup-reading-early') return;
         this.setPhase('tossup-reading');
-        this.setStatus('Buzz: A (Team 1) or L (Team 2). 5 seconds.');
+        showButtons('reveal-btn');
+        // Start the NSB buzz window. A buzz (handleBuzz) stops this timer; if it
+        // expires with no buzz, onTossupTimeout reveals the answer and advances.
         this.timer.start(TOSSUP_SECONDS, () => this.onTossupTimeout());
+        this.setStatus('Question fully read. Wait for the buzz app, then press A (Team 1) or L (Team 2).');
       } catch (err) {
         console.warn('Agent toss-up speak failed:', err);
         // Fallback to manual
         showButtons('read-btn');
         this.setStatus('Agent error — switch to manual.');
+      }
+    }
+
+    async startInterruptReread(autoSpeak) {
+      const round = App.rounds[this.roundIdx];
+      const team = this.pendingRereadTeam || this.buzzedTeam;
+      if (!team) return;
+      this.timer.stop();
+      $('question-text').textContent = round.tossup.question;
+      $('question-type').textContent = formatType('Toss-up', round.tossup) + ` · ${TOSSUP_POINTS} pts`;
+      $('answer-reveal').classList.add('hidden');
+      if (!autoSpeak) {
+        this.setPhase('tossup-reread-answering');
+        this.flashTeam(team);
+        this.setStatus(`${this.teamNames[team]} — answer after the full re-read.`, team, 'warn');
+        showButtons('correct-btn', 'incorrect-btn', 'reveal-btn');
+        return;
+      }
+      try {
+        await Agent.speak(`Re-reading the toss-up for ${this.teamNames[team]}. They answer for ${TOSSUP_POINTS} points.`);
+        if (this.phase !== 'tossup-reread-pending') return;
+        await Agent.speakQuestion(round.tossup.question);
+        if (this.phase !== 'tossup-reread-pending') return;
+        this.setPhase('tossup-reread-answering');
+        this.flashTeam(team);
+        this.setStatus(`${this.teamNames[team]} — listening for their answer now…`, team, 'warn');
+        showButtons('correct-btn', 'incorrect-btn', 'reveal-btn');
+        this.promptAgentAnswer('tossup', { autoStart: true });
+      } catch (err) {
+        console.warn('Agent re-read failed:', err);
+        this.setPhase('tossup-reread-answering');
+        showButtons('correct-btn', 'incorrect-btn', 'reveal-btn');
       }
     }
 
@@ -1246,10 +1585,10 @@
         await Agent.speakQuestion(round.bonus.question);
         if (this.phase !== 'bonus-pending') return;
         this.setPhase('bonus-reading');
-        this.setStatus(`${this.teamNames[this.tossupOwner]} — hold to answer (20 sec).`);
+        this.setStatus(`${this.teamNames[this.tossupOwner]} — listening for the bonus answer now…`);
         showButtons('correct-btn', 'incorrect-btn', 'reveal-btn');
         this.timer.start(BONUS_SECONDS, () => this.onBonusTimeout());
-        this.showPtt(true);
+        this.promptAgentAnswer('bonus', { autoStart: true });
       } catch (err) {
         console.warn('Agent bonus failed:', err);
       }
@@ -1261,18 +1600,29 @@
         return;
       }
       this._pttListening = true;
-      const ms = (kind === 'tossup' ? TOSSUP_SECONDS : BONUS_SECONDS) * 1000;
+      // No-speech window = time for the player to BEGIN speaking after buzzing.
+      // maxMs = absolute cap. The no-speech timer is cleared once they start
+      // talking, so a slow or lengthy spoken answer is never cut off mid-word.
+      const startWindowMs = (kind === 'tossup' ? 9000 : 12000);
+      const maxMs = (kind === 'tossup' ? 20000 : BONUS_SECONDS * 1000);
       this.transcriptEl.classList.remove('hidden');
       this.transcriptEl.innerHTML = '<span class="label">Listening</span>';
       try {
         const transcript = await Agent.listen({
-          timeoutMs: ms + 2000,
+          timeoutMs: startWindowMs,
+          maxMs,
           interim: (t) => { this.transcriptEl.innerHTML = `<span class="label">Listening</span><div>${escapeHtml(t)}</div>`; },
         });
         this.timer.stop();
         this.sttFailures = 0;
         this._pttListening = false;
         this.showPtt(false);
+        // Moderator review gate: pause so the moderator can reword/fix the heard
+        // answer and decide — nothing is judged or scored until they approve.
+        if (App.reviewGate) {
+          this.enterReview(transcript, kind);
+          return;
+        }
         const q = (kind === 'tossup') ? App.rounds[this.roundIdx].tossup : App.rounds[this.roundIdx].bonus;
         this.transcriptEl.innerHTML = `<span class="label">Judging…</span><div>"${escapeHtml(transcript)}"</div>`;
         const verdict = await judgeAnswer(transcript, q);
@@ -1280,8 +1630,10 @@
         // Persistent response panel — what the team said
         this._showTeamResponse(transcript, verdict, this.buzzedTeam);
         if (verdict.needsReview) {
+          this.setDecisionBanner('LLM uncertain — human decide now. Use Mark Correct or Mark Incorrect.', 'warn');
           this.setStatus('Judgment needs review — click Correct or Incorrect to confirm.', null, 'warn');
           showButtons('correct-btn', 'incorrect-btn', 'reveal-btn');
+          $('two-team-controls').classList.add('review-required');
           return;
         }
         if (verdict.correct) this.onCorrect();
@@ -1297,6 +1649,7 @@
           // moderator judge manually instead of penalizing on the clock.
           this.timer.stop();
           this.timer.reset();
+          this.setDecisionBanner('Voice unavailable — moderator judge manually using Correct / Incorrect.', 'danger');
           this.transcriptEl.innerHTML = `<span class="label">Voice unavailable</span><div>Speech recognition couldn't connect (<code>${escapeHtml(msg)}</code>). Clock stopped — judge the answer manually.</div>`;
         } else {
           console.warn('Agent listen error:', msg);
@@ -1305,8 +1658,72 @@
         if (this.sttFailures >= 2) {
           this.transcriptEl.innerHTML += '<div>Voice had repeated errors. Use manual Correct/Incorrect controls for this round.</div>';
         }
+        // Even when voice fails, let the moderator type what they heard and
+        // judge it — the review gate doubles as the manual-entry path.
+        if (App.reviewGate) {
+          this.enterReview('', kind, msg);
+          return;
+        }
         showButtons('correct-btn', 'incorrect-btn', 'reveal-btn');
       }
+    }
+
+    /**
+     * Moderator review gate. Shows the heard answer in an editable field and
+     * pauses — nothing is judged or scored until the moderator presses Judge
+     * (which runs the judge as an assist) or marks Correct/Incorrect directly.
+     */
+    enterReview(text, kind, note) {
+      this._reviewKind = kind;
+      this.timer.stop();
+      this.showPtt(false);
+      this.clearDecisionBanner();
+      $('two-team-controls').classList.remove('review-required');
+      const input = $('tt-answer-input');
+      input.value = text || '';
+      $('tt-answer-review').classList.remove('hidden');
+      $('tt-response-display').classList.add('hidden');
+      // Keep the recorded/explained response in sync from the start.
+      $('tt-response-text').textContent = text || '';
+      this.transcriptEl.classList.add('hidden');
+      this.transcriptEl.innerHTML = '';
+      this.setStatus(
+        note
+          ? `Voice didn't capture (${note}). Type what the team said, then press Judge (G) — or mark it directly.`
+          : 'Review or reword the answer, then press Judge (G) — or mark it directly. Nothing is scored until you decide.',
+        this.buzzedTeam, 'warn');
+      showButtons('judge-btn', 'correct-btn', 'incorrect-btn', 'reveal-btn');
+      try { input.focus(); input.select(); } catch (_) {}
+    }
+
+    /** Judge the (possibly reworded) answer as guidance — moderator still finalizes. */
+    async onJudgeReviewed() {
+      const input = $('tt-answer-input');
+      const text = (input.value || '').trim();
+      $('tt-response-text').textContent = text;
+      const round = App.rounds[this.roundIdx];
+      const q = (this._reviewKind === 'bonus') ? round.bonus : round.tossup;
+      this.transcriptEl.classList.remove('hidden');
+      this.transcriptEl.innerHTML = '<span class="label">Judging…</span>';
+      const verdict = await judgeAnswer(text, q);
+      this.transcriptEl.innerHTML = `<span class="label">Suggested judgment</span>${renderVerdictBlock(verdict, text)}`;
+      const conf = Math.round((verdict.confidence || 0) * 100);
+      this.setStatus(`Suggested: ${verdict.correct ? 'CORRECT' : 'INCORRECT'} (${conf}% confidence). Confirm with Mark Correct or Mark Incorrect.`, this.buzzedTeam, verdict.correct ? 'success' : 'warn');
+      showButtons('judge-btn', 'correct-btn', 'incorrect-btn', 'reveal-btn');
+    }
+
+    promptAgentAnswer(kind, options = {}) {
+      const { autoStart = false } = options;
+      this.showPtt(true);
+      if (!autoStart || !App.agentDriving || this._pttListening || !Agent.isSttSupported()) return;
+      this.pttBtn && this.pttBtn.classList.add('active');
+      setTimeout(() => {
+        const phaseMatches = (kind === 'bonus')
+          ? this.phase === 'bonus-reading'
+          : ['tossup-buzzed', 'tossup-reread-answering'].includes(this.phase);
+        if (!phaseMatches || this._pttListening) return;
+        this.runAgentAnswer(kind);
+      }, 250);
     }
 
     bindPttButton() {
@@ -1314,7 +1731,7 @@
       const start = (e) => {
         e.preventDefault();
         if (!App.agentDriving || this._pttListening) return;
-        if (this.phase !== 'tossup-buzzed' && this.phase !== 'bonus-reading') return;
+        if (!['tossup-buzzed', 'tossup-reread-answering', 'bonus-reading'].includes(this.phase)) return;
         this.pttBtn.classList.add('active');
         this.runAgentAnswer(this.phase === 'bonus-reading' ? 'bonus' : 'tossup');
       };
@@ -1332,6 +1749,7 @@
     showPtt(show) {
       if (!this.pttBtn) return;
       this.pttBtn.classList.toggle('hidden', !show || !Agent.isSttSupported());
+      this.pttBtn.classList.remove('active');
     }
 
     // -------- Helpers --------
@@ -1387,8 +1805,10 @@
     setPhase(phase) {
       this.phase = phase;
       this._lastWasBonus = phase === 'bonus-reading' || phase === 'bonus-pending' || (phase === 'revealed' && this._lastWasBonus);
-      $('phase-label').textContent = phase.startsWith('bonus') ? 'Bonus' : 'Toss-up';
-      $('phase-label').classList.toggle('bonus', phase.startsWith('bonus'));
+      const showBonus = phase.startsWith('bonus') || (phase === 'revealed' && this._lastWasBonus);
+      $('phase-label').textContent = showBonus ? 'Bonus' : 'Toss-up';
+      $('phase-label').classList.toggle('bonus', showBonus);
+      this.updateHostDisplay();
     }
 
     setStatus(msg, team, mod) {
@@ -1404,10 +1824,12 @@
       this.clearTeamFlash();
       if (team === 1) document.querySelector('.team.team1').classList.add('active-buzz');
       if (team === 2) document.querySelector('.team.team2').classList.add('active-buzz');
+      this.updateHostDisplay();
     }
 
     clearTeamFlash() {
       document.querySelectorAll('.team.active-buzz').forEach(el => el.classList.remove('active-buzz'));
+      this.updateHostDisplay();
     }
 
     _showTeamResponse(text, verdict, team) {
@@ -1418,6 +1840,93 @@
       el.className = `response-display ${cls}`;
       lab.textContent = team ? `${this.teamNames[team]} said` : 'Team said';
       txt.textContent = (text || '').trim();
+    }
+
+
+    setDecisionBanner(message, tone) {
+      const el = $('decision-banner');
+      const controls = $('two-team-controls');
+      if (!el || !controls) return;
+      if (!message) {
+        el.className = 'decision-banner hidden';
+        el.textContent = '';
+        controls.classList.remove('review-required');
+        return;
+      }
+      el.textContent = message;
+      el.className = `decision-banner ${tone || 'warn'}`;
+      controls.classList.add('review-required');
+    }
+
+    clearDecisionBanner() {
+      this.setDecisionBanner('');
+    }
+
+    updateHostDisplay() {
+      const stateEl = $('round-state');
+      const turnEl = $('turn-indicator');
+      const interruptEl = $('interrupt-banner');
+      const roundInfo = document.querySelector('.round-info');
+      const questionCard = $('question-card');
+      if (!stateEl || !turnEl) return;
+      let stateText = 'Moderator ready';
+      let turnText = 'Waiting to begin the toss-up';
+      let tone = '';
+      let interruptMessage = '';
+      if (this.phase === 'tossup-reading-early') {
+        stateText = 'Reading in progress';
+        turnText = 'Either team may interrupt with A/L';
+      } else if (this.phase === 'tossup-reading') {
+        stateText = 'Waiting for buzz';
+        turnText = 'Use A or L when the buzz app shows who buzzed';
+      } else if (this.phase === 'tossup-buzzed') {
+        stateText = this.currentTossupWasInterrupt ? 'Interrupt attempt' : 'Toss-up answer';
+        turnText = this.buzzedTeam ? `${this.teamNames[this.buzzedTeam]} is answering now` : 'Waiting for an answer';
+        tone = this.buzzedTeam || '';
+      } else if (this.phase === 'tossup-reread-pending') {
+        stateText = 'Interrupt penalty';
+        turnText = this.pendingRereadTeam ? `${this.teamNames[this.pendingRereadTeam]} gets +4 and a full re-read` : 'Prepare to re-read the toss-up';
+        tone = 'warn';
+        interruptMessage = this.pendingRereadTeam
+          ? `⚠ INTERRUPT PENALTY — RE-READ THE FULL TOSS-UP FOR ${this.teamNames[this.pendingRereadTeam].toUpperCase()}`
+          : '⚠ INTERRUPT PENALTY — RE-READ THE FULL TOSS-UP';
+      } else if (this.phase === 'tossup-reread-answering') {
+        stateText = 'Re-read answer';
+        turnText = this.buzzedTeam ? `${this.teamNames[this.buzzedTeam]} answers after the re-read` : 'Answer after the re-read';
+        tone = this.buzzedTeam || 'warn';
+        interruptMessage = this.buzzedTeam
+          ? `⚠ RE-READ COMPLETE — ${this.teamNames[this.buzzedTeam].toUpperCase()} ANSWERS NOW`
+          : '⚠ RE-READ COMPLETE — ANSWER NOW';
+      } else if (this.phase === 'bonus-pending') {
+        stateText = 'Bonus ready';
+        turnText = this.tossupOwner ? `${this.teamNames[this.tossupOwner]} earned the bonus` : 'Bonus ready';
+        tone = this.tossupOwner || '';
+      } else if (this.phase === 'bonus-reading') {
+        stateText = 'Bonus live';
+        turnText = this.tossupOwner ? `${this.teamNames[this.tossupOwner]} is conferring / answering` : 'Bonus answering';
+        tone = this.tossupOwner || 'warn';
+      } else if (this.phase === 'revealed') {
+        stateText = 'Answer revealed';
+        turnText = 'Review result and move to the next round';
+      }
+      stateEl.textContent = stateText;
+      turnEl.textContent = turnText;
+      turnEl.className = 'turn-indicator';
+      if (tone === 1 || tone === '1') turnEl.classList.add('team1');
+      else if (tone === 2 || tone === '2') turnEl.classList.add('team2');
+      else if (tone === 'warn') turnEl.classList.add('warn');
+
+      if (interruptEl) {
+        if (interruptMessage) {
+          interruptEl.textContent = interruptMessage;
+          interruptEl.classList.remove('hidden');
+        } else {
+          interruptEl.textContent = '';
+          interruptEl.classList.add('hidden');
+        }
+      }
+      if (roundInfo) roundInfo.classList.toggle('interrupt-mode', !!interruptMessage);
+      if (questionCard) questionCard.classList.toggle('interrupt-mode', !!interruptMessage);
     }
 
     _recordAttempt({ team, kind, correct, response, source }) {
@@ -1446,6 +1955,7 @@
     addScore(team, pts) {
       this.scores[team] += pts;
       this.updateScores();
+      this.updateHostDisplay();
     }
 
     updateScores() {
@@ -1478,6 +1988,10 @@
       this.sttFailures = 0;
       this._pttListening = false;
       this.bindKeys = (e) => this.onKey(e);
+      // Guided-review mode: hide answers/score/correctness during the test and
+      // present every toss-up AND bonus, then reveal everything in the end review.
+      this.deferReview = !!(App.matchOpts && App.matchOpts.deferReview);
+      this._answeredCount = 0;
       // History entry per question (toss-up or bonus). Each: {round, kind, question, response, verdict, canonical}
       this.history = [];
     }
@@ -1503,6 +2017,12 @@
       this.bindPttButton();
       document.addEventListener('keydown', this.bindKeys);
 
+      if (this.deferReview) {
+        // In guided-review mode the answer is never shown mid-test, so "reveal"
+        // wording would be misleading — this button just skips with no answer.
+        $('solo-reveal-btn').textContent = 'Skip — no answer';
+      }
+
       this.loadRound();
     }
 
@@ -1525,6 +2045,8 @@
       this.transcriptEl.innerHTML = '';
       $('solo-answer-wrap').classList.add('hidden');
       $('solo-answer-input').value = '';
+      const ssReset = $('solo-answer-select');
+      if (ssReset) { ssReset.classList.add('hidden'); ssReset.innerHTML = ''; }
       $('solo-response-display').classList.add('hidden');
       $('solo-response-display').className = 'response-display hidden';
       $('solo-response-text').textContent = '';
@@ -1573,33 +2095,54 @@
 
     onBuzz() {
       if (this.phase !== 'tossup-reading' && this.phase !== 'bonus-reading') return;
-      // Show input field (typed or spoken). Solo mode is self-paced — generous timer.
+      // Show the answer area. Multiple-choice questions get a friendly dropdown
+      // of the W/X/Y/Z options; everything else gets the free-text box.
       $('solo-answer-wrap').classList.remove('hidden');
-      $('solo-answer-input').focus();
+      const q = this.phase === 'tossup-reading' ? App.rounds[this.roundIdx].tossup : App.rounds[this.roundIdx].bonus;
+      const sel = $('solo-answer-select');
+      const inp = $('solo-answer-input');
+      const choices = q && q.type === 'multiple_choice' ? parseChoices(q.question) : null;
+      if (sel && choices) {
+        sel.innerHTML = '<option value="" selected disabled>Choose your answer…</option>' +
+          choices.map((c) => `<option value="${c.letter}">${c.letter}) ${escapeHtml(c.text)}</option>`).join('');
+        sel.classList.remove('hidden');
+        inp.classList.add('hidden');
+        sel.focus();
+      } else {
+        if (sel) sel.classList.add('hidden');
+        inp.classList.remove('hidden');
+        inp.focus();
+      }
+      // Now that the answer area is open, hide "I'm Ready" (keep "I don't know").
+      soloShowButtons('solo-reveal-btn');
       const secs = this.phase === 'tossup-reading' ? 45 : 45;
       this.timer.start(secs, () => this.onAnswerTimeout());
       if (App.agentDriving && Agent.isSttSupported()) {
-        this.setStatus('Hold to answer, or type in the box.', null);
+        this.setStatus(choices ? 'Pick your answer, or hold the mic to say it.' : 'Hold to answer, or type in the box.', null);
         this.showPtt(true);
       }
     }
 
     async onSubmitTyped() {
       if (this.phase !== 'tossup-reading' && this.phase !== 'bonus-reading') return;
-      const txt = $('solo-answer-input').value.trim();
+      const sel = $('solo-answer-select');
+      const usingSelect = sel && !sel.classList.contains('hidden');
+      const txt = (usingSelect ? (sel.value || '') : $('solo-answer-input').value).trim();
       if (!txt) return;
       this.timer.stop();
       Agent.cancel();
       const q = this.phase === 'tossup-reading' ? App.rounds[this.roundIdx].tossup : App.rounds[this.roundIdx].bonus;
-      // Show "judging" state if LLM is enabled
-      if (window.LLMJudge && LLMJudge.isReady()) {
+      // Show "judging" state if LLM is enabled (skipped in guided-review mode)
+      if (!this.deferReview && window.LLMJudge && LLMJudge.isReady()) {
         this.transcriptEl.classList.remove('hidden');
         this.transcriptEl.innerHTML = `<span class="label">Judging…</span><div>"${escapeHtml(txt)}"</div>`;
       }
       const verdict = await judgeAnswer(txt, q);
-      // Render verdict block in transcript area
-      this.transcriptEl.classList.remove('hidden');
-      this.transcriptEl.innerHTML = `<span class="label">Judgment</span>${renderVerdictBlock(verdict, txt)}`;
+      if (!this.deferReview) {
+        // Render verdict block (withheld in guided-review mode until the end)
+        this.transcriptEl.classList.remove('hidden');
+        this.transcriptEl.innerHTML = `<span class="label">Judgment</span>${renderVerdictBlock(verdict, txt)}`;
+      }
       this.processVerdict(verdict, txt);
     }
 
@@ -1742,8 +2285,6 @@
       // Lock out further submissions for this question
       $('solo-answer-wrap').classList.add('hidden');
       $('solo-answer-input').value = '';
-      // Show what the kid said in a persistent panel
-      this.showResponse(given, verdict);
       // Track in round history
       const round = App.rounds[this.roundIdx];
       const q = wasBonus ? round.bonus : round.tossup;
@@ -1780,8 +2321,51 @@
           team: null,
         });
       }
+      this.lastVerdict = { verdict, given, wasBonus };
+
+      // ---- Accounting (always — feeds the end-of-test review and results) ----
+      if (wasBonus) {
+        this.bonusesAttempted += 1;
+        if (verdict.correct) { this.score += BONUS_POINTS; this.bonusesCorrect += 1; this.correctCount += 1; this.streak += 1; }
+        else { this.incorrectCount += 1; this.streak = 0; }
+      } else {
+        this.tossupsAttempted += 1;
+        if (verdict.correct) { this.score += TOSSUP_POINTS; this.tossupsCorrect += 1; this.correctCount += 1; this.streak += 1; this.tossupOwner = true; }
+        else { this.incorrectCount += 1; this.streak = 0; }
+      }
+
+      // ---- Guided-review mode: reveal nothing until the end ----
+      if (this.deferReview) {
+        this._answeredCount += 1;
+        const totalQ = App.rounds.length * 2;
+        this.showResponseNeutral(given);
+        this.hideOverrides();
+        this.transcriptEl.classList.add('hidden');
+        $('solo-answer-reveal').classList.add('hidden');
+        $('solo-explanation-panel').classList.add('hidden');
+        const cheers = ['Nice — locked in! 🎯', 'Got it! On to the next →', 'Great focus! Keep going 💪', 'Answer saved! Next →', 'Awesome — keep it up ⭐'];
+        const cheer = cheers[this._answeredCount % cheers.length];
+        const progress = `Question ${this._answeredCount} of ${totalQ}`;
+        const last = (this.roundIdx + 1 >= App.rounds.length);
+        if (!wasBonus) {
+          // Always present the bonus too — every question gets answered.
+          this.setPhase('bonus-pending');
+          $('solo-read-btn').textContent = 'Next question →';
+          soloShowButtons('solo-read-btn');
+          this.setStatus(`${cheer}  ·  ${progress}`, null);
+        } else {
+          this.setPhase('revealed');
+          $('solo-next-btn').textContent = last ? 'Finish & review together →' : 'Next question →';
+          soloShowButtons('solo-next-btn');
+          this.setStatus(last ? `All done! 🎉 Now review every question together.  ·  ${progress}` : `${cheer}  ·  ${progress}`, null);
+        }
+        this.updateStats();
+        return;
+      }
+
+      // ---- Normal mode: immediate feedback ----
+      this.showResponse(given, verdict);
       this.revealAnswer();
-      // Kick off the brief explanation (async — UI stays responsive)
       $('solo-explanation-panel').classList.add('hidden');
       fillExplanation({
         panelId: 'solo-explanation-panel',
@@ -1791,20 +2375,12 @@
         wasCorrect: !!verdict.correct,
         historyEntry,
       });
-      this.lastVerdict = { verdict, given, wasBonus };
 
       if (wasBonus) {
-        this.bonusesAttempted += 1;
         if (verdict.correct) {
-          this.score += BONUS_POINTS;
-          this.bonusesCorrect += 1;
-          this.correctCount += 1;
-          this.streak += 1;
           this.setStatus(`+${BONUS_POINTS} bonus! ${this.formatVerdict(verdict, given)}`, null, 'success');
           if (App.agentDriving) Agent.speak(`Correct. Plus ten points.`);
         } else {
-          this.incorrectCount += 1;
-          this.streak = 0;
           this.setStatus(`Bonus missed. ${this.formatVerdict(verdict, given)}`, null, 'danger');
           if (App.agentDriving) Agent.speak(`Incorrect. The answer was: ${plainAnswer(App.rounds[this.roundIdx].bonus)}`);
         }
@@ -1812,24 +2388,15 @@
         soloShowButtons('solo-next-btn');
         this.showOverrides();
       } else {
-        this.tossupsAttempted += 1;
         if (verdict.correct) {
-          this.score += TOSSUP_POINTS;
-          this.tossupsCorrect += 1;
-          this.correctCount += 1;
-          this.streak += 1;
-          this.tossupOwner = true;
           this.setStatus(`+${TOSSUP_POINTS}! ${this.formatVerdict(verdict, given)} — bonus next.`, null, 'success');
           if (App.agentDriving) Agent.speak(`Correct. Plus four points. Bonus question.`);
           this.setPhase('bonus-pending');
-          $('solo-answer-wrap').classList.add('hidden');
           $('solo-read-btn').textContent = 'Read Bonus';
           soloShowButtons(App.agentDriving ? 'solo-next-btn' : 'solo-read-btn', 'solo-next-btn');
           this.showOverrides();
           if (App.agentDriving) this.runAgentBonus();
         } else {
-          this.incorrectCount += 1;
-          this.streak = 0;
           this.setStatus(`Missed. ${this.formatVerdict(verdict, given)} No bonus.`, null, 'danger');
           if (App.agentDriving) Agent.speak(`Incorrect. The answer was: ${plainAnswer(App.rounds[this.roundIdx].tossup)}`);
           this.setPhase('revealed');
@@ -1838,6 +2405,16 @@
         }
       }
       this.updateStats();
+    }
+
+    showResponseNeutral(given) {
+      // Confirm what the kid typed without revealing whether it's right.
+      const el = $('solo-response-display');
+      const txt = $('solo-response-text');
+      el.className = 'response-display';
+      let display = (given || '').trim();
+      if (display === '(time)' || display === '(skipped)' || !display) display = '(no answer)';
+      txt.textContent = display;
     }
 
     overrideJudgment(makeCorrect) {
@@ -1964,8 +2541,9 @@
     setPhase(phase) {
       this.phase = phase;
       this._lastWasBonus = phase === 'bonus-reading' || phase === 'bonus-pending' || (phase === 'revealed' && this._lastWasBonus);
-      $('solo-phase-label').textContent = phase.startsWith('bonus') ? 'Bonus' : 'Toss-up';
-      $('solo-phase-label').classList.toggle('bonus', phase.startsWith('bonus'));
+      const showBonus = phase.startsWith('bonus') || (phase === 'revealed' && this._lastWasBonus);
+      $('solo-phase-label').textContent = showBonus ? 'Bonus' : 'Toss-up';
+      $('solo-phase-label').classList.toggle('bonus', showBonus);
     }
 
     setStatus(msg, _team, mod) {
@@ -1976,6 +2554,15 @@
     }
 
     updateStats() {
+      if (this.deferReview) {
+        // Guided-review mode: keep score/correctness hidden during the test.
+        $('solo-score').textContent = '🔒';
+        $('solo-correct').textContent = '–';
+        $('solo-incorrect').textContent = '–';
+        $('solo-accuracy').textContent = '🔒';
+        $('solo-streak').textContent = 'shown at the end';
+        return;
+      }
       $('solo-score').textContent = this.score;
       $('solo-correct').textContent = this.correctCount;
       $('solo-incorrect').textContent = this.incorrectCount;
@@ -2028,10 +2615,17 @@
   }
 
   function showButtons(...ids) {
-    ['read-btn', 'correct-btn', 'incorrect-btn', 'reveal-btn', 'next-btn'].forEach((id) => {
+    ['read-btn', 'judge-btn', 'correct-btn', 'incorrect-btn', 'reveal-btn', 'next-btn'].forEach((id) => {
       $(id).classList.add('hidden');
     });
     ids.forEach((id) => $(id) && $(id).classList.remove('hidden'));
+  }
+
+  function clickVisibleButton(id) {
+    const el = $(id);
+    if (!el || el.classList.contains('hidden') || el.disabled) return false;
+    el.click();
+    return true;
   }
 
   function soloShowButtons(...ids) {
@@ -2047,6 +2641,22 @@
 
   function plainAnswer(q) {
     return q.type === 'multiple_choice' ? `${q.answer}, ${q.answer_text || ''}`.replace(/,\s*$/, '').trim() : q.answer;
+  }
+
+  /**
+   * Parse the W/X/Y/Z options out of a multiple-choice question stem.
+   * Returns [{letter, text}, …] in W-X-Y-Z order, or null if it can't find them.
+   */
+  function parseChoices(question) {
+    if (!question) return null;
+    const re = /\b([WXYZ])\)\s*(.+?)(?=\s+[WXYZ]\)|\s*$)/gs;
+    const found = {};
+    let m;
+    while ((m = re.exec(question)) !== null) {
+      found[m[1]] = m[2].replace(/[.\s]+$/, '').trim();
+    }
+    const out = ['W', 'X', 'Y', 'Z'].filter((l) => found[l]).map((l) => ({ letter: l, text: found[l] }));
+    return out.length >= 2 ? out : null;
   }
 
   function escapeHtml(s) {

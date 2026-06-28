@@ -1,0 +1,15 @@
+# Cloudflare Worker config for the Science Bowl LLM proxy.
+# Deploy from this folder:  wrangler deploy
+# Set secrets (never commit these):
+#   wrangler secret put ANTHROPIC_API_KEY
+#   wrangler secret put GOOGLE_API_KEY      # only if you use Gemini
+#   wrangler secret put APP_TOKEN           # optional shared gate (also set proxyToken in the app config)
+name = "nsb-llm-proxy"
+main = "llm-proxy.js"
+compatibility_date = "2024-11-01"
+
+# Lock the proxy to your Pages site's origin. Update after you know the URL,
+# e.g. "https://nsb-quiz.pages.dev" (or your custom domain). Leave unset only
+# while testing.
+[vars]
+ALLOWED_ORIGIN = "https://CHANGE-ME.pages.dev"

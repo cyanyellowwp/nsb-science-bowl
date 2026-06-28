@@ -73,7 +73,7 @@
         chart.innerHTML = '<div class="empty-mini">No matches yet.</div>';
         return;
       }
-      const w = 600, h = 140, padX = 16, padY = 16;
+      const w = 600, h = 140, padX = 38, padY = 16;
       const innerW = w - 2 * padX;
       const innerH = h - 2 * padY;
       const points = trend.map((m, i) => ({
@@ -93,10 +93,10 @@
       const grid = [0, 0.5, 1].map((v) => {
         const y = padY + (1 - v) * innerH;
         return `<line x1="${padX}" x2="${padX + innerW}" y1="${y}" y2="${y}" class="trend-grid"/>` +
-          `<text x="${padX - 6}" y="${y + 4}" class="trend-axis-label">${Math.round(v * 100)}%</text>`;
+          `<text x="${padX - 8}" y="${y + 4}" class="trend-axis-label">${Math.round(v * 100)}%</text>`;
       }).join('');
       chart.innerHTML = `
-        <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+        <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet">
           ${grid}
           <path d="${areaPath}" class="trend-area"/>
           <path d="${linePath}" class="trend-line"/>

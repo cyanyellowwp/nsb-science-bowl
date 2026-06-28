@@ -2,14 +2,18 @@
   "schema_version": "2.0",
   "source": "Campbell Biology, Chapters 1-2 (Themes, Evolution, Scientific Inquiry; The Chemical Context of Life)",
   "audience": "middle_school_nsb",
-  "style_guide": "See RULES.md §11. Questions calibrated against the 2019 DOE NSB-MS sample bank: target 15-22 words, no formal connectives ('whereby', 'thereby', 'wherein'), at most one nested subordinate clause, technical jargon belongs in the answer not the stem.",
+  "style_guide": "See RULES.md \u00a711. Questions calibrated against the 2019 DOE NSB-MS sample bank: target 15-22 words, no formal connectives ('whereby', 'thereby', 'wherein'), at most one nested subordinate clause, technical jargon belongs in the answer not the stem.",
   "last_updated": "2026-05-02",
   "concepts": [
     {
       "id": "levels-of-organization",
       "category": "Biology - General",
       "subcategory": "Themes / Hierarchy",
-      "tags": ["ch1", "themes", "hierarchy"],
+      "tags": [
+        "ch1",
+        "themes",
+        "hierarchy"
+      ],
       "tossup_variants": [
         {
           "id": "tu-loo-1",
@@ -32,7 +36,11 @@
       "id": "emergent-properties",
       "category": "Biology - General",
       "subcategory": "Themes / Hierarchy",
-      "tags": ["ch1", "themes", "organization"],
+      "tags": [
+        "ch1",
+        "themes",
+        "organization"
+      ],
       "tossup_variants": [
         {
           "id": "tu-emp-1",
@@ -55,7 +63,11 @@
       "id": "darwin-natural-selection",
       "category": "Biology - Evolution",
       "subcategory": "Darwin",
-      "tags": ["ch1", "evolution", "darwin"],
+      "tags": [
+        "ch1",
+        "evolution",
+        "darwin"
+      ],
       "tossup_variants": [
         {
           "id": "tu-dns-1",
@@ -77,7 +89,11 @@
       "id": "inductive-deductive-reasoning",
       "category": "Biology - Scientific Inquiry",
       "subcategory": "Reasoning",
-      "tags": ["ch1", "inquiry", "reasoning"],
+      "tags": [
+        "ch1",
+        "inquiry",
+        "reasoning"
+      ],
       "tossup_variants": [
         {
           "id": "tu-idr-1",
@@ -100,7 +116,11 @@
       "id": "controlled-experiment",
       "category": "Biology - Scientific Inquiry",
       "subcategory": "Experimental Design",
-      "tags": ["ch1", "inquiry", "experiment"],
+      "tags": [
+        "ch1",
+        "inquiry",
+        "experiment"
+      ],
       "tossup_variants": [
         {
           "id": "tu-ctrl-1",
@@ -123,7 +143,11 @@
       "id": "homeostasis",
       "category": "Biology - General",
       "subcategory": "Themes / Regulation",
-      "tags": ["ch1", "themes", "regulation"],
+      "tags": [
+        "ch1",
+        "themes",
+        "regulation"
+      ],
       "tossup_variants": [
         {
           "id": "tu-hom-1",
@@ -145,7 +169,11 @@
       "id": "evidence-for-evolution",
       "category": "Biology - Evolution",
       "subcategory": "Evidence",
-      "tags": ["ch1", "evolution", "evidence"],
+      "tags": [
+        "ch1",
+        "evolution",
+        "evidence"
+      ],
       "tossup_variants": [
         {
           "id": "tu-evo-1",
@@ -168,7 +196,11 @@
       "id": "elements-of-life",
       "category": "Chemistry - Atoms",
       "subcategory": "Elements",
-      "tags": ["ch2", "atoms", "elements"],
+      "tags": [
+        "ch2",
+        "atoms",
+        "elements"
+      ],
       "tossup_variants": [
         {
           "id": "tu-eol-1",
@@ -191,7 +223,11 @@
       "id": "isotopes",
       "category": "Chemistry - Atoms",
       "subcategory": "Isotopes",
-      "tags": ["ch2", "atoms", "isotopes"],
+      "tags": [
+        "ch2",
+        "atoms",
+        "isotopes"
+      ],
       "tossup_variants": [
         {
           "id": "tu-iso-1",
@@ -214,7 +250,11 @@
       "id": "electron-shells",
       "category": "Chemistry - Atoms",
       "subcategory": "Electrons",
-      "tags": ["ch2", "atoms", "shells"],
+      "tags": [
+        "ch2",
+        "atoms",
+        "shells"
+      ],
       "tossup_variants": [
         {
           "id": "tu-esh-1",
@@ -236,7 +276,11 @@
       "id": "covalent-bond",
       "category": "Chemistry - Bonding",
       "subcategory": "Covalent",
-      "tags": ["ch2", "bonding", "covalent"],
+      "tags": [
+        "ch2",
+        "bonding",
+        "covalent"
+      ],
       "tossup_variants": [
         {
           "id": "tu-cov-1",
@@ -259,7 +303,11 @@
       "id": "electronegativity",
       "category": "Chemistry - Bonding",
       "subcategory": "Electronegativity",
-      "tags": ["ch2", "bonding", "electronegativity"],
+      "tags": [
+        "ch2",
+        "bonding",
+        "electronegativity"
+      ],
       "tossup_variants": [
         {
           "id": "tu-eng-1",
@@ -282,7 +330,11 @@
       "id": "ionic-bond",
       "category": "Chemistry - Bonding",
       "subcategory": "Ionic",
-      "tags": ["ch2", "bonding", "ionic"],
+      "tags": [
+        "ch2",
+        "bonding",
+        "ionic"
+      ],
       "tossup_variants": [
         {
           "id": "tu-ion-1",
@@ -305,7 +357,11 @@
       "id": "hydrogen-bond",
       "category": "Chemistry - Bonding",
       "subcategory": "Hydrogen",
-      "tags": ["ch2", "bonding", "hydrogen"],
+      "tags": [
+        "ch2",
+        "bonding",
+        "hydrogen"
+      ],
       "tossup_variants": [
         {
           "id": "tu-hyd-1",
@@ -327,7 +383,10 @@
       "id": "chemical-reactions",
       "category": "Chemistry - Reactions",
       "subcategory": "Reactants/Products",
-      "tags": ["ch2", "reactions"],
+      "tags": [
+        "ch2",
+        "reactions"
+      ],
       "tossup_variants": [
         {
           "id": "tu-rxn-1",
@@ -350,7 +409,11 @@
       "id": "population",
       "category": "Biology - General",
       "subcategory": "Ecology",
-      "tags": ["ch1", "ecology", "population"],
+      "tags": [
+        "ch1",
+        "ecology",
+        "population"
+      ],
       "tossup_variants": [
         {
           "id": "tu-pop-1",
@@ -373,7 +436,11 @@
       "id": "darwin-voyage",
       "category": "Biology - Evolution",
       "subcategory": "Darwin",
-      "tags": ["ch1", "evolution", "darwin"],
+      "tags": [
+        "ch1",
+        "evolution",
+        "darwin"
+      ],
       "tossup_variants": [
         {
           "id": "tu-voy-1",
@@ -396,7 +463,11 @@
       "id": "subatomic-particles",
       "category": "Chemistry - Atoms",
       "subcategory": "Subatomic",
-      "tags": ["ch2", "atoms", "particles"],
+      "tags": [
+        "ch2",
+        "atoms",
+        "particles"
+      ],
       "tossup_variants": [
         {
           "id": "tu-sub-1",
@@ -418,7 +489,11 @@
       "id": "carbon-bonds",
       "category": "Chemistry - Bonding",
       "subcategory": "Carbon",
-      "tags": ["ch2", "bonding", "carbon"],
+      "tags": [
+        "ch2",
+        "bonding",
+        "carbon"
+      ],
       "tossup_variants": [
         {
           "id": "tu-cb-1",
@@ -441,7 +516,11 @@
       "id": "discovery-science",
       "category": "Biology - Scientific Inquiry",
       "subcategory": "Methods",
-      "tags": ["ch1", "inquiry", "methods"],
+      "tags": [
+        "ch1",
+        "inquiry",
+        "methods"
+      ],
       "tossup_variants": [
         {
           "id": "tu-dsc-1",
@@ -464,7 +543,11 @@
       "id": "lowest-level-of-life",
       "category": "Biology - General",
       "subcategory": "Themes / Hierarchy",
-      "tags": ["ch1", "themes", "cell"],
+      "tags": [
+        "ch1",
+        "themes",
+        "cell"
+      ],
       "tossup_variants": [
         {
           "id": "tu-lll-1",
@@ -487,7 +570,11 @@
       "id": "noble-gases",
       "category": "Chemistry - Atoms",
       "subcategory": "Periodic Table",
-      "tags": ["ch2", "atoms", "noble-gases"],
+      "tags": [
+        "ch2",
+        "atoms",
+        "noble-gases"
+      ],
       "tossup_variants": [
         {
           "id": "tu-ngs-1",
@@ -510,7 +597,11 @@
       "id": "adaptation",
       "category": "Biology - Evolution",
       "subcategory": "Adaptation",
-      "tags": ["ch1", "evolution", "adaptation"],
+      "tags": [
+        "ch1",
+        "evolution",
+        "adaptation"
+      ],
       "tossup_variants": [
         {
           "id": "tu-adp-1",
@@ -532,7 +623,11 @@
       "id": "bond-strength",
       "category": "Chemistry - Bonding",
       "subcategory": "Comparative Strength",
-      "tags": ["ch2", "bonding", "strength"],
+      "tags": [
+        "ch2",
+        "bonding",
+        "strength"
+      ],
       "tossup_variants": [
         {
           "id": "tu-bs-1",
@@ -555,7 +650,11 @@
       "id": "biodiversity",
       "category": "Biology - General",
       "subcategory": "Diversity",
-      "tags": ["ch1", "diversity", "domains"],
+      "tags": [
+        "ch1",
+        "diversity",
+        "domains"
+      ],
       "tossup_variants": [
         {
           "id": "tu-bio-1",
@@ -571,6 +670,625 @@
           "question": "Which domain contains organisms whose cells have a membrane-bound nucleus? W) Bacteria. X) Archaea. Y) Eukarya. Z) Both X and Y.",
           "answer": "Y",
           "answer_text": "Eukarya"
+        }
+      ]
+    },
+    {
+      "id": "math-order-of-operations",
+      "category": "Math - General",
+      "subcategory": "Operations",
+      "tags": [
+        "math",
+        "order_of_operations"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-math-ops-1",
+          "type": "multiple_choice",
+          "question": "What is the value of 3 + 4 \u00d7 2? W) 11. X) 14. Y) 7. Z) 24.",
+          "answer": "W",
+          "answer_text": "11"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-math-ops-1",
+          "type": "short_answer",
+          "question": "Evaluate 5 squared plus 7.",
+          "answer": "32"
+        }
+      ]
+    },
+    {
+      "id": "math-prime-number",
+      "category": "Math - General",
+      "subcategory": "Number Theory",
+      "tags": [
+        "math",
+        "primes"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-math-prime-1",
+          "type": "short_answer",
+          "question": "What is the smallest prime number greater than 10?",
+          "answer": "11"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-math-prime-1",
+          "type": "multiple_choice",
+          "question": "Which of these is a prime number? W) 21. X) 27. Y) 29. Z) 33.",
+          "answer": "Y",
+          "answer_text": "29"
+        }
+      ]
+    },
+    {
+      "id": "math-pythagorean-theorem",
+      "category": "Math - General",
+      "subcategory": "Geometry",
+      "tags": [
+        "math",
+        "geometry",
+        "triangles"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-math-pyth-1",
+          "type": "short_answer",
+          "question": "In a right triangle with legs 3 and 4, what is the hypotenuse?",
+          "answer": "5"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-math-pyth-1",
+          "type": "short_answer",
+          "question": "What formula relates the sides of a right triangle?",
+          "answer": "a squared plus b squared equals c squared (accept: a^2 + b^2 = c^2, Pythagorean theorem)"
+        }
+      ]
+    },
+    {
+      "id": "math-slope",
+      "category": "Math - General",
+      "subcategory": "Algebra",
+      "tags": [
+        "math",
+        "algebra",
+        "slope"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-math-slope-1",
+          "type": "multiple_choice",
+          "question": "What is the slope of the line through (0, 0) and (2, 6)? W) 2. X) 3. Y) 4. Z) 6.",
+          "answer": "X",
+          "answer_text": "3"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-math-slope-1",
+          "type": "short_answer",
+          "question": "What is the slope of a horizontal line?",
+          "answer": "0"
+        }
+      ]
+    },
+    {
+      "id": "earth-rock-cycle",
+      "category": "Earth and Space Science - General",
+      "subcategory": "Earth Science",
+      "tags": [
+        "earth_space",
+        "earth_science",
+        "rocks"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-earth-rock-1",
+          "type": "short_answer",
+          "question": "What type of rock forms when magma cools and solidifies?",
+          "answer": "Igneous rock (accept: igneous)"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-earth-rock-1",
+          "type": "multiple_choice",
+          "question": "Which rock type forms from heat and pressure? W) Igneous. X) Sedimentary. Y) Metamorphic. Z) Molten.",
+          "answer": "Y",
+          "answer_text": "Metamorphic"
+        }
+      ]
+    },
+    {
+      "id": "earth-water-cycle",
+      "category": "Earth and Space Science - General",
+      "subcategory": "Earth Science",
+      "tags": [
+        "earth_space",
+        "earth_science",
+        "water_cycle"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-earth-water-1",
+          "type": "short_answer",
+          "question": "What is the process by which liquid water changes into water vapor?",
+          "answer": "Evaporation"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-earth-water-1",
+          "type": "short_answer",
+          "question": "What is the process by which water vapor changes into liquid droplets?",
+          "answer": "Condensation"
+        }
+      ]
+    },
+    {
+      "id": "space-earth-rotation",
+      "category": "Earth and Space Science - General",
+      "subcategory": "Space Science",
+      "tags": [
+        "earth_space",
+        "space_science",
+        "rotation"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-space-rotation-1",
+          "type": "multiple_choice",
+          "question": "What causes day and night on Earth? W) Revolution around the Sun. X) Rotation on its axis. Y) Moon phases. Z) Seasons.",
+          "answer": "X",
+          "answer_text": "Rotation on its axis"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-space-rotation-1",
+          "type": "short_answer",
+          "question": "About how many hours does Earth take to rotate once?",
+          "answer": "24 hours (accept: about 24, one day)"
+        }
+      ]
+    },
+    {
+      "id": "space-inner-planets",
+      "category": "Earth and Space Science - General",
+      "subcategory": "Space Science",
+      "tags": [
+        "earth_space",
+        "space_science",
+        "planets"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-space-planets-1",
+          "type": "short_answer",
+          "question": "What is the third planet from the Sun?",
+          "answer": "Earth"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-space-planets-1",
+          "type": "multiple_choice",
+          "question": "Which planet is closest to the Sun? W) Venus. X) Earth. Y) Mercury. Z) Mars.",
+          "answer": "Y",
+          "answer_text": "Mercury"
+        }
+      ]
+    },
+    {
+      "id": "math-area-rectangle",
+      "category": "Math - General",
+      "subcategory": "Geometry",
+      "tags": [
+        "math",
+        "geometry",
+        "area"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-math-area-rect-1",
+          "type": "short_answer",
+          "question": "What is the area of a rectangle with length 8 and width 3?",
+          "answer": "24"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-math-area-rect-1",
+          "type": "multiple_choice",
+          "question": "Which formula gives the area of a rectangle? W) 2l + 2w. X) l times w. Y) one half b times h. Z) pi r squared.",
+          "answer": "X",
+          "answer_text": "l times w"
+        }
+      ]
+    },
+    {
+      "id": "math-circumference",
+      "category": "Math - General",
+      "subcategory": "Geometry",
+      "tags": [
+        "math",
+        "geometry",
+        "circles"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-math-circ-1",
+          "type": "multiple_choice",
+          "question": "What is the circumference formula for a circle of radius r? W) pi r squared. X) 2 pi r. Y) r squared. Z) pi d squared.",
+          "answer": "X",
+          "answer_text": "2 pi r"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-math-circ-1",
+          "type": "short_answer",
+          "question": "What is the circumference of a circle with diameter 10 in terms of pi?",
+          "answer": "10 pi"
+        }
+      ]
+    },
+    {
+      "id": "math-perimeter-square",
+      "category": "Math - General",
+      "subcategory": "Geometry",
+      "tags": [
+        "math",
+        "geometry",
+        "perimeter"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-math-per-square-1",
+          "type": "short_answer",
+          "question": "What is the perimeter of a square with side length 6?",
+          "answer": "24"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-math-per-square-1",
+          "type": "multiple_choice",
+          "question": "A square has perimeter 20. What is one side length? W) 4. X) 5. Y) 10. Z) 20.",
+          "answer": "X",
+          "answer_text": "5"
+        }
+      ]
+    },
+    {
+      "id": "math-fractions-addition",
+      "category": "Math - General",
+      "subcategory": "Fractions",
+      "tags": [
+        "math",
+        "fractions",
+        "operations"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-math-frac-add-1",
+          "type": "short_answer",
+          "question": "What is one half plus one fourth?",
+          "answer": "three fourths (accept: 3/4)"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-math-frac-add-1",
+          "type": "multiple_choice",
+          "question": "Which fraction is equivalent to one half? W) 2/3. X) 3/8. Y) 4/8. Z) 5/12.",
+          "answer": "Y",
+          "answer_text": "4/8"
+        }
+      ]
+    },
+    {
+      "id": "math-decimal-place-value",
+      "category": "Math - General",
+      "subcategory": "Decimals",
+      "tags": [
+        "math",
+        "decimals",
+        "place_value"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-math-decimal-1",
+          "type": "short_answer",
+          "question": "In 4.572, what digit is in the hundredths place?",
+          "answer": "7"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-math-decimal-1",
+          "type": "multiple_choice",
+          "question": "Which number is greatest? W) 0.45. X) 0.405. Y) 0.54. Z) 0.504.",
+          "answer": "Y",
+          "answer_text": "0.54"
+        }
+      ]
+    },
+    {
+      "id": "math-integers-negative",
+      "category": "Math - General",
+      "subcategory": "Integers",
+      "tags": [
+        "math",
+        "integers",
+        "operations"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-math-int-neg-1",
+          "type": "short_answer",
+          "question": "What is negative 3 plus 8?",
+          "answer": "5"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-math-int-neg-1",
+          "type": "multiple_choice",
+          "question": "What is negative 4 times negative 2? W) negative 8. X) negative 6. Y) 6. Z) 8.",
+          "answer": "Z",
+          "answer_text": "8"
+        }
+      ]
+    },
+    {
+      "id": "math-ratio",
+      "category": "Math - General",
+      "subcategory": "Ratios",
+      "tags": [
+        "math",
+        "ratios",
+        "proportions"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-math-ratio-1",
+          "type": "short_answer",
+          "question": "Write the ratio 8 to 12 in simplest form.",
+          "answer": "2 to 3 (accept: 2:3, 2/3)"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-math-ratio-1",
+          "type": "multiple_choice",
+          "question": "If 3 notebooks cost 6 dollars, how much do 5 notebooks cost at the same rate? W) 8 dollars. X) 10 dollars. Y) 12 dollars. Z) 15 dollars.",
+          "answer": "X",
+          "answer_text": "10 dollars"
+        }
+      ]
+    },
+    {
+      "id": "math-probability",
+      "category": "Math - General",
+      "subcategory": "Probability",
+      "tags": [
+        "math",
+        "probability"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-math-prob-1",
+          "type": "short_answer",
+          "question": "What is the probability of rolling a 3 on a fair six-sided die?",
+          "answer": "one sixth (accept: 1/6)"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-math-prob-1",
+          "type": "multiple_choice",
+          "question": "A bag has 2 red and 3 blue marbles. What is the probability of drawing a red marble? W) 2/5. X) 3/5. Y) 1/2. Z) 1/5.",
+          "answer": "W",
+          "answer_text": "2/5"
+        }
+      ]
+    },
+    {
+      "id": "earth-layers",
+      "category": "Earth and Space Science - General",
+      "subcategory": "Earth Science",
+      "tags": [
+        "earth_space",
+        "earth_science",
+        "layers"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-earth-layers-1",
+          "type": "short_answer",
+          "question": "What is the solid outer layer of Earth called?",
+          "answer": "Crust"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-earth-layers-1",
+          "type": "multiple_choice",
+          "question": "Which layer of Earth lies directly below the crust? W) Core. X) Mantle. Y) Inner core. Z) Atmosphere.",
+          "answer": "X",
+          "answer_text": "Mantle"
+        }
+      ]
+    },
+    {
+      "id": "earth-plate-tectonics",
+      "category": "Earth and Space Science - General",
+      "subcategory": "Earth Science",
+      "tags": [
+        "earth_space",
+        "earth_science",
+        "plate_tectonics"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-earth-plates-1",
+          "type": "short_answer",
+          "question": "What theory explains the movement of Earth's lithospheric plates?",
+          "answer": "Plate tectonics"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-earth-plates-1",
+          "type": "multiple_choice",
+          "question": "Earthquakes commonly happen near the boundaries of what moving structures? W) Clouds. X) Plates. Y) Fossils. Z) Rivers.",
+          "answer": "X",
+          "answer_text": "Plates"
+        }
+      ]
+    },
+    {
+      "id": "earth-weather-vs-climate",
+      "category": "Earth and Space Science - General",
+      "subcategory": "Earth Science",
+      "tags": [
+        "earth_space",
+        "earth_science",
+        "weather",
+        "climate"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-earth-weather-1",
+          "type": "short_answer",
+          "question": "What term describes long-term average weather patterns in a region?",
+          "answer": "Climate"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-earth-weather-1",
+          "type": "multiple_choice",
+          "question": "Which instrument measures air pressure? W) Thermometer. X) Barometer. Y) Seismograph. Z) Anemometer.",
+          "answer": "X",
+          "answer_text": "Barometer"
+        }
+      ]
+    },
+    {
+      "id": "earth-moon-phases",
+      "category": "Earth and Space Science - General",
+      "subcategory": "Space Science",
+      "tags": [
+        "earth_space",
+        "space_science",
+        "moon"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-space-moon-1",
+          "type": "short_answer",
+          "question": "What causes the phases of the Moon as seen from Earth?",
+          "answer": "The changing positions of the Earth, Moon, and Sun (accept: relative positions of the Moon, Earth, and Sun)"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-space-moon-1",
+          "type": "multiple_choice",
+          "question": "During which phase is the Moon between Earth and the Sun? W) Full moon. X) First quarter. Y) New moon. Z) Waning gibbous.",
+          "answer": "Y",
+          "answer_text": "New moon"
+        }
+      ]
+    },
+    {
+      "id": "space-seasons",
+      "category": "Earth and Space Science - General",
+      "subcategory": "Space Science",
+      "tags": [
+        "earth_space",
+        "space_science",
+        "seasons"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-space-seasons-1",
+          "type": "short_answer",
+          "question": "What mainly causes the seasons on Earth?",
+          "answer": "Earth's axial tilt (accept: the tilt of Earth's axis)"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-space-seasons-1",
+          "type": "multiple_choice",
+          "question": "Which season begins in the Northern Hemisphere when that hemisphere is tilted most toward the Sun? W) Winter. X) Spring. Y) Summer. Z) Autumn.",
+          "answer": "Y",
+          "answer_text": "Summer"
+        }
+      ]
+    },
+    {
+      "id": "space-stars-sun",
+      "category": "Earth and Space Science - General",
+      "subcategory": "Space Science",
+      "tags": [
+        "earth_space",
+        "space_science",
+        "stars",
+        "sun"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-space-sun-1",
+          "type": "short_answer",
+          "question": "What type of star is the Sun?",
+          "answer": "A star (accept: yellow dwarf star, main-sequence star)"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-space-sun-1",
+          "type": "multiple_choice",
+          "question": "What is the main source of the Sun's energy? W) Burning coal. X) Nuclear fusion. Y) Nuclear fission. Z) Reflected light.",
+          "answer": "X",
+          "answer_text": "Nuclear fusion"
+        }
+      ]
+    },
+    {
+      "id": "space-gravity-orbit",
+      "category": "Earth and Space Science - General",
+      "subcategory": "Space Science",
+      "tags": [
+        "earth_space",
+        "space_science",
+        "gravity",
+        "orbit"
+      ],
+      "tossup_variants": [
+        {
+          "id": "tu-space-orbit-1",
+          "type": "short_answer",
+          "question": "What force keeps planets in orbit around the Sun?",
+          "answer": "Gravity"
+        }
+      ],
+      "bonus_variants": [
+        {
+          "id": "bo-space-orbit-1",
+          "type": "multiple_choice",
+          "question": "Which object orbits Earth? W) The Sun. X) Mars. Y) The Moon. Z) Venus.",
+          "answer": "Y",
+          "answer_text": "The Moon"
         }
       ]
     }

@@ -85,5 +85,33 @@
       const v = Judge.judge('molecule', { type: 'multiple_choice', answer: 'X', answer_text: 'Molecule' });
       T.assert(v.correct, `expected correct, got ${v.reason}`);
     });
+    T.it('does not let the word "why" inside a verbal answer count as the letter Y', () => {
+      // Correct option is W; student rambles a wrong verbal answer containing "why".
+      const v = Judge.judge('why would it be the cell one', { type: 'multiple_choice', answer: 'W', answer_text: 'Tissue' });
+      T.assert(!v.correct, `expected incorrect, got correct (${v.reason})`);
+    });
+    T.it('still accepts a bare phonetic letter ("why" => Y)', () => {
+      const v = Judge.judge('why', { type: 'multiple_choice', answer: 'Y', answer_text: 'Atom' });
+      T.assert(v.correct, `expected correct, got ${v.reason}`);
+    });
+  });
+
+  T.describe('Judge: false-positive guards (anti-cheat)', () => {
+    T.it('rejects a negated answer ("not oxygen" for "Oxygen")', () => {
+      const v = Judge.judge('not oxygen', { type: 'short_answer', answer: 'Oxygen' });
+      T.assert(!v.correct, `expected incorrect, got correct (${v.reason})`);
+    });
+    T.it('rejects a single part of a multi-part answer ("bacteria" for all three domains)', () => {
+      const v = Judge.judge('bacteria', { type: 'short_answer', answer: 'Bacteria, Archaea, and Eukarya' });
+      T.assert(!v.correct, `expected incorrect, got correct (${v.reason})`);
+    });
+    T.it('accepts the full multi-part answer', () => {
+      const v = Judge.judge('bacteria archaea and eukarya', { type: 'short_answer', answer: 'Bacteria, Archaea, and Eukarya' });
+      T.assert(v.correct, `expected correct, got ${v.reason}`);
+    });
+    T.it('does not match a single-letter canonical inside an unrelated word ("calcium" for "C")', () => {
+      const v = Judge.judge('calcium', { type: 'short_answer', answer: 'C' });
+      T.assert(!v.correct, `expected incorrect, got correct (${v.reason})`);
+    });
   });
 })();

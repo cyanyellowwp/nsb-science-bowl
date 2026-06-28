@@ -254,9 +254,9 @@
       });
     },
 
-    /** Last N matches, newest first (suited for a list view). */
+    /** Last N completed matches, newest first (suited for a list view). */
     recentMatches(n) {
-      return this.data.matches.slice(-Math.max(1, n || 10)).slice().reverse();
+      return this.data.matches.filter((m) => m.completed).slice(-Math.max(1, n || 10)).reverse();
     },
 
     clear() {

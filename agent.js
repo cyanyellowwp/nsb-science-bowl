@@ -19,6 +19,7 @@
     voiceName: null,                 // user override; null = auto-pick
     _recognition: null,
     _currentUtterance: null,
+    _keepAlive: null,
 
     isSupported() {
       return !!synth && !!SpeechRecognition;
@@ -135,21 +136,46 @@
         this._currentUtterance = u;
         this._setState('speaking', { text });
 
-        u.onend = () => {
+        // Single settle path so end / error / safety-timeout can't double-fire.
+        let settled = false;
+        let safety = null;
+        const finishSpeak = (err) => {
+          if (settled) return;
+          settled = true;
+          this._stopKeepAlive();
+          if (safety) { clearTimeout(safety); safety = null; }
           if (this._currentUtterance === u) {
             this._currentUtterance = null;
             this._setState('idle');
           }
-          resolve();
+          if (err) reject(err); else resolve();
         };
+
+        // Chrome silently stops speechSynthesis after ~15s of continuous speech
+        // (and is especially flaky with network/cloud voices), which cut the
+        // toss-up read off mid-sentence — typically around the longer MC stem.
+        // Toggling pause()/resume() on an interval keeps the engine alive for
+        // the full utterance. Cleared on settle and by cancel().
+        this._stopKeepAlive();
+        this._keepAlive = setInterval(() => {
+          if (!synth.speaking) { this._stopKeepAlive(); return; }
+          try { synth.pause(); synth.resume(); } catch (_) {}
+        }, 10000);
+
+        // Safety net: some Chrome/voice combinations never fire onend or
+        // onerror, which would leave the agent stuck "speaking" forever — the
+        // overlay frozen and any awaiting caller (read flow, post-answer
+        // announcement) never resuming. Resolve after a generous estimate of
+        // the utterance length so the game always proceeds.
+        const wordCount = (text || '').trim().split(/\s+/).filter(Boolean).length;
+        const maxMs = Math.min(60000, Math.max(8000, wordCount * 800));
+        safety = setTimeout(() => finishSpeak(), maxMs);
+
+        u.onend = () => finishSpeak();
         u.onerror = (e) => {
-          if (this._currentUtterance === u) {
-            this._currentUtterance = null;
-            this._setState('idle');
-          }
           // 'canceled' / 'interrupted' aren't true errors
-          if (e.error === 'canceled' || e.error === 'interrupted') resolve();
-          else reject(new Error('TTS error: ' + e.error));
+          if (e.error === 'canceled' || e.error === 'interrupted') finishSpeak();
+          else finishSpeak(new Error('TTS error: ' + e.error));
         };
         if (opts.onBoundary) u.onboundary = opts.onBoundary;
 
@@ -167,7 +193,7 @@
      * Falls back to a single speak() call for short-answer questions.
      */
     async speakQuestion(text) {
-      if (!text) return;
+      if (!text || this._cancelRequested) return;
       // Detect MC options as "W) ..." through "Z) ..."
       const m = text.match(/^(.*?)\s*W\)\s*(.+?)\s*X\)\s*(.+?)\s*Y\)\s*(.+?)\s*Z\)\s*(.+?)\s*\.?$/s);
       if (!m) {
@@ -177,8 +203,9 @@
       const [, stem, w, x, y, z] = m;
       // Read the question stem (drop trailing "?" punctuation cue is fine — it's already there)
       await this.speak(stem.trim());
-      if (this.state !== 'speaking' && this._cancelRequested) return;
+      if (this._cancelRequested) return;
       await sleep(220);
+      if (this._cancelRequested) return;
       // Each option, slightly slower with a clear letter prefix
       const optRate = Math.max(0.55, (this.rate || 0.8) - 0.05);
       const opts = [
@@ -188,6 +215,7 @@
         if (this._cancelRequested) return;
         // "Option W. Cell, tissue, organ, or organism."
         await this.speak(`Option ${letter}. ${body.replace(/\.$/, '')}.`, { rate: optRate });
+        if (this._cancelRequested) return;
         await sleep(150);
       }
     },
@@ -200,71 +228,132 @@
       return new Promise((resolve, reject) => {
         if (!SpeechRecognition) return reject(new Error('SpeechRecognition not supported'));
 
-        const rec = new SpeechRecognition();
-        rec.lang = 'en-US';
-        rec.interimResults = !!opts.interim;
-        rec.maxAlternatives = 3;
-        rec.continuous = false;
-
         let finalTranscript = '';
+        let lastInterim = '';
+        let speechStarted = false;
         let resolved = false;
-        let timer = null;
+        let pendingRetry = false;
+        let transientRetries = 0;
+        const MAX_TRANSIENT_RETRIES = 2;
+        let noSpeechTimer = null;
+        let maxTimer = null;
+        let rec = null;
+
+        const clearTimers = () => {
+          if (noSpeechTimer) { clearTimeout(noSpeechTimer); noSpeechTimer = null; }
+          if (maxTimer) { clearTimeout(maxTimer); maxTimer = null; }
+        };
 
         const finish = (val, err) => {
           if (resolved) return;
           resolved = true;
-          if (timer) clearTimeout(timer);
-          try { rec.stop(); } catch (_) {}
+          clearTimers();
+          try { rec && rec.stop(); } catch (_) {}
           this._recognition = null;
           this._setState('idle');
           if (err) reject(err);
           else resolve(val);
         };
 
-        rec.onresult = (event) => {
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            const r = event.results[i];
-            if (r.isFinal) {
-              finalTranscript += r[0].transcript;
-            } else if (opts.interim) {
-              opts.interim(r[0].transcript);
+        // Once the speaker actually starts talking, cancel the no-speech
+        // timeout so a slow or lengthy answer is never cut off mid-sentence.
+        const markSpeaking = () => {
+          speechStarted = true;
+          if (noSpeechTimer) { clearTimeout(noSpeechTimer); noSpeechTimer = null; }
+        };
+
+        const startRecognition = () => {
+          pendingRetry = false;
+          rec = new SpeechRecognition();
+          rec.lang = 'en-US';
+          rec.interimResults = !!opts.interim;
+          rec.maxAlternatives = 3;
+          rec.continuous = false;
+          rec.onspeechstart = markSpeaking;
+
+          rec.onresult = (event) => {
+            markSpeaking();
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              const r = event.results[i];
+              if (r.isFinal) {
+                finalTranscript += r[0].transcript;
+              } else {
+                lastInterim = r[0].transcript;
+                if (opts.interim) opts.interim(r[0].transcript);
+              }
             }
-          }
-          if (finalTranscript.trim()) finish(finalTranscript.trim());
-        };
-
-        rec.onerror = (e) => {
-          if (e.error === 'no-speech') finish('', new Error('no-speech'));
-          else if (e.error === 'aborted') finish('');
-          else finish(null, new Error('STT: ' + e.error));
-        };
-
-        rec.onend = () => {
-          if (!resolved) {
             if (finalTranscript.trim()) finish(finalTranscript.trim());
+          };
+
+          rec.onerror = (e) => {
+            // Chrome can emit a spurious 'no-speech' / 'aborted' / 'audio-capture'
+            // right after TTS releases the mic — even while the player is talking.
+            // If nothing was captured yet, retry a couple of times within the
+            // overall window instead of giving up on the first hiccup.
+            const transient = (e.error === 'no-speech' || e.error === 'aborted' || e.error === 'audio-capture');
+            const nothingHeard = !speechStarted && !finalTranscript.trim() && !lastInterim.trim();
+            if (transient && nothingHeard && !resolved && transientRetries < MAX_TRANSIENT_RETRIES) {
+              transientRetries += 1;
+              pendingRetry = true;
+              try { rec.abort(); } catch (_) {}
+              setTimeout(() => { if (!resolved) startRecognition(); }, 200);
+              return;
+            }
+            if (e.error === 'no-speech') finish('', new Error('no-speech'));
+            else if (e.error === 'aborted') finish('');
+            else finish(null, new Error('STT: ' + e.error));
+          };
+
+          rec.onend = () => {
+            // onend fires after onerror; if a retry is queued, let it run.
+            if (resolved || pendingRetry) return;
+            // Prefer a finalized transcript, but fall back to the last interim
+            // so a captured-but-not-finalized answer isn't discarded.
+            const best = finalTranscript.trim() || lastInterim.trim();
+            if (best) finish(best);
             else finish('', new Error('no-speech'));
-          }
+          };
+
+          this._recognition = rec;
+          this._setState('listening');
+          try { rec.start(); } catch (_) { /* start() can throw if called too soon after abort; retries/timeouts cover it */ }
         };
 
-        this._recognition = rec;
-        this._setState('listening');
-        rec.start();
+        startRecognition();
 
+        // No-speech timeout: only fires if the speaker never starts talking
+        // across the whole window (retries included).
         if (opts.timeoutMs) {
-          timer = setTimeout(() => finish('', new Error('timeout')), opts.timeoutMs);
+          noSpeechTimer = setTimeout(() => {
+            if (!speechStarted && !resolved) finish('', new Error('no-speech'));
+          }, opts.timeoutMs);
         }
+        // Absolute safety cap so recognition can't hang forever — uses whatever
+        // was captured (final or last interim) rather than failing outright.
+        maxTimer = setTimeout(() => {
+          if (resolved) return;
+          const best = finalTranscript.trim() || lastInterim.trim();
+          if (best) finish(best);
+          else finish('', new Error('timeout'));
+        }, opts.maxMs || 30000);
       });
+    },
+
+    _stopKeepAlive() {
+      if (this._keepAlive) { clearInterval(this._keepAlive); this._keepAlive = null; }
     },
 
     cancel() {
       this._cancelRequested = true;
+      this._stopKeepAlive();
       try { synth && synth.cancel(); } catch (_) {}
       try { this._recognition && this._recognition.abort(); } catch (_) {}
       this._currentUtterance = null;
       this._recognition = null;
       this._setState('idle');
-      // Reset the cancel flag on next tick so subsequent speak() calls work
-      setTimeout(() => { this._cancelRequested = false; }, 100);
+      // Give in-flight speech loops a moment to observe cancellation before
+      // allowing later speech calls to proceed.
+      setTimeout(() => { this._cancelRequested = false; }, 250);
     },
   };
 
@@ -461,22 +550,55 @@
 
     _judgeMultipleChoice(sp, q) {
       const expectedLetter = q.answer.toLowerCase();
-      const tokens = sp.split(/\s+/);
-      const letterFound = tokens.find((t) => /^[wxyz]$/.test(t) || /^(double[uw]|doubleyou|ex|why|zee|zed)$/.test(t));
-      if (letterFound) {
-        const heard = phoneticToLetter(letterFound);
-        if (heard === expectedLetter) return { correct: true, confidence: 0.95, reason: 'letter match' };
-        return { correct: false, confidence: 0.9, reason: `heard letter ${heard.toUpperCase()}, expected ${q.answer}` };
+      const tokens = sp.split(/\s+/).filter(Boolean);
+
+      // 1. Unambiguous single-letter token (W/X/Y/Z). Highest-confidence signal.
+      const explicit = tokens.find((t) => /^[wxyz]$/.test(t));
+      if (explicit) {
+        if (explicit === expectedLetter) return { correct: true, confidence: 0.95, reason: 'letter match' };
+        return { correct: false, confidence: 0.9, reason: `heard letter ${explicit.toUpperCase()}, expected ${q.answer}` };
       }
-      // Verbal answer match — fall through to short-answer judging using the option text
+
+      // 2. Verbal answer matching the correct option text. Tried BEFORE phonetic
+      //    homophones so a real answer containing a word like "why" isn't
+      //    mis-read as the letter Y.
       if (q.answer_text) {
         const verbal = this._judgeShortAnswer(sp, { ...q, type: 'short_answer', answer: q.answer_text });
         if (verbal.correct) return { ...verbal, reason: `verbal: ${verbal.reason}` };
+      }
+
+      // 3. Phonetic homophone ("why"=Y, "ex"=X, "zee"=Z, …) — only when the
+      //    student essentially just said the letter (a short utterance), so
+      //    "why is it the third one" doesn't collide with the letter Y.
+      if (tokens.length <= 2) {
+        const phon = tokens.find((t) => /^(double[uw]|doubleyou|ex|why|zee|zed)$/.test(t));
+        if (phon) {
+          const heard = phoneticToLetter(phon);
+          if (heard === expectedLetter) return { correct: true, confidence: 0.9, reason: 'letter match (phonetic)' };
+          return { correct: false, confidence: 0.85, reason: `heard letter ${heard.toUpperCase()}, expected ${q.answer}` };
+        }
       }
       return { correct: false, confidence: 0.5, reason: 'no match' };
     },
 
     _judgeShortAnswer(sp, q) {
+      // Multi-part canonical answers ("Bacteria, Archaea, and Eukarya") require
+      // EVERY part — a single matching part earns no credit. This mirrors the
+      // LLM judge's rule 5 (no partial credit on multi-part answers).
+      const parts = requiredParts(q.answer);
+      if (parts.length) {
+        const allPresent = parts.every((p) => sp === p || containsWord(sp, p));
+        return allPresent
+          ? { correct: true, confidence: 0.95, reason: 'all required parts present', match: q.answer }
+          : { correct: false, confidence: 0.6, reason: 'multi-part answer is missing one or more required parts', match: null };
+      }
+
+      // Negation guard: if the student negates and the canonical does not, no
+      // fuzzy/substring match should count as correct ("not oxygen" ≠ "oxygen").
+      const NEGATION = /\b(not|no|never|none|nor)\b/;
+      const studentNegates = NEGATION.test(sp);
+      const canonicalNegates = NEGATION.test(norm(q.answer));
+
       // Build a rich set of acceptable answer forms
       const baseCandidates = expandAcceptables(q.answer);
       const candidates = new Set();
@@ -520,9 +642,13 @@
           if (studentForm === exp) {
             return { correct: true, confidence: 1.0, reason: studentForm === sp ? 'exact' : 'exact (after normalization)', match: exp };
           }
-          // 2. Substring (either direction)
-          if (studentForm.includes(exp) || exp.includes(studentForm)) {
-            if (best.confidence < 0.9) best = { correct: true, confidence: 0.9, reason: 'substring', match: exp };
+          // 2. Substring (whole-word, either direction). Word-boundary aligned
+          //    and length-guarded so a short candidate like "c" (carbon) can't
+          //    match inside an unrelated word ("calcium"). Confidence stays
+          //    below the Tier-1 cutoff (0.85) so borderline phrasings escalate
+          //    to the LLM judge instead of being trusted outright.
+          if (containsWord(studentForm, exp) || containsWord(exp, studentForm)) {
+            if (best.confidence < 0.82) best = { correct: true, confidence: 0.82, reason: 'substring', match: exp };
             continue;
           }
           // 3. Stem-level equality (e.g., "homologous" stem == "homology" stem)
@@ -545,6 +671,9 @@
             best = { correct: false, confidence: overlap, reason: `partial token overlap (${overlap.toFixed(2)})`, match: exp };
           }
         }
+      }
+      if (best.correct && studentNegates && !canonicalNegates) {
+        return { correct: false, confidence: 0.55, reason: 'student answer negates the canonical', match: best.match };
       }
       return best;
     },
@@ -662,6 +791,28 @@
     if (!tb.length) return 0;
     const hits = tb.filter((t) => ta.has(t)).length;
     return hits / tb.length;
+  }
+
+  /** True if `needle` (≥3 chars) appears as a whole word inside `hay`. */
+  function containsWord(hay, needle) {
+    if (!needle || needle.length < 3) return false;
+    const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp('\\b' + escaped + '\\b').test(hay);
+  }
+
+  /**
+   * Split a conjunctive multi-part canonical answer ("A, B, and C") into its
+   * required, normalized components. Returns [] for single-part answers and for
+   * disjunctions ("A or B"), where either alternative suffices and normal
+   * matching should run instead.
+   */
+  function requiredParts(answer) {
+    const cleaned = String(answer || '')
+      .replace(/\((?:accept|do not accept)[^)]*\)/ig, '')
+      .replace(/\baccept[:\s][^).]*/ig, '');
+    if (/\bor\b/i.test(cleaned)) return [];
+    const parts = cleaned.split(/,|\band\b/i).map((s) => norm(s)).filter(Boolean);
+    return parts.length > 1 ? parts : [];
   }
 
   window.Agent = Agent;

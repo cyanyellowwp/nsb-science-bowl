@@ -1,0 +1,320 @@
+{
+  "schema_version": "2.0",
+  "source": "Hand-curated Grade 5 elementary intro set",
+  "audience": "Grade 5 (ages 10-11) — a gentle introduction to the National Science Bowl format and topics",
+  "style_guide": "Simple, friendly wording. One clear idea per question. Mix of multiple-choice (W/X/Y/Z) and short-answer, across the four NSB topic areas. Facts kept at an elementary level.",
+  "concepts": [
+    {
+      "id": "g5-bio-breathing",
+      "category": "Biology",
+      "subcategory": "Living things",
+      "subject": "biology",
+      "tags": ["grade5", "biology", "life-science"],
+      "tossup_variants": [
+        { "id": "g5-tu-breathing", "type": "short_answer", "question": "What gas do humans need to breathe in from the air to stay alive?", "answer": "Oxygen" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-living", "type": "multiple_choice", "question": "Which of these is NOT a living thing? W) a tree X) a dog Y) a rock Z) a fish", "answer": "Y", "answer_text": "A rock" }
+      ]
+    },
+    {
+      "id": "g5-bio-plants",
+      "category": "Biology",
+      "subcategory": "Plants",
+      "subject": "biology",
+      "tags": ["grade5", "biology", "plants"],
+      "tossup_variants": [
+        { "id": "g5-tu-roots", "type": "multiple_choice", "question": "Which part of a plant takes in water and nutrients from the soil? W) leaves X) flower Y) roots Z) petals", "answer": "Y", "answer_text": "Roots" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-plant-oxygen", "type": "short_answer", "question": "Plants make their own food using sunlight. What gas do they give off that animals need to breathe?", "answer": "Oxygen" }
+      ]
+    },
+    {
+      "id": "g5-bio-animals",
+      "category": "Biology",
+      "subcategory": "Animals",
+      "subject": "biology",
+      "tags": ["grade5", "biology", "animals"],
+      "tossup_variants": [
+        { "id": "g5-tu-herbivore", "type": "short_answer", "question": "What do we call an animal that eats only plants?", "answer": "Herbivore" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-mammal", "type": "multiple_choice", "question": "Which of these animals is a mammal? W) frog X) shark Y) snake Z) dolphin", "answer": "Z", "answer_text": "Dolphin" }
+      ]
+    },
+    {
+      "id": "g5-bio-body",
+      "category": "Biology",
+      "subcategory": "Human body",
+      "subject": "biology",
+      "tags": ["grade5", "biology", "human-body"],
+      "tossup_variants": [
+        { "id": "g5-tu-heart", "type": "multiple_choice", "question": "Which organ pumps blood all around your body? W) lungs X) brain Y) heart Z) stomach", "answer": "Y", "answer_text": "Heart" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-bones", "type": "short_answer", "question": "How many bones are in a typical adult human body?", "answer": "206" }
+      ]
+    },
+    {
+      "id": "g5-bio-lifecycle",
+      "category": "Biology",
+      "subcategory": "Life cycles",
+      "subject": "biology",
+      "tags": ["grade5", "biology", "life-cycle"],
+      "tossup_variants": [
+        { "id": "g5-tu-caterpillar", "type": "short_answer", "question": "Before it becomes a butterfly, what is the young, wormlike stage called?", "answer": "Caterpillar (accept: larva)" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-frog", "type": "multiple_choice", "question": "Which stage comes FIRST in a frog's life cycle? W) frog X) tadpole Y) egg Z) froglet", "answer": "Y", "answer_text": "Egg" }
+      ]
+    },
+    {
+      "id": "g5-bio-foodchain",
+      "category": "Biology",
+      "subcategory": "Ecosystems",
+      "subject": "biology",
+      "tags": ["grade5", "biology", "ecosystems"],
+      "tossup_variants": [
+        { "id": "g5-tu-predator", "type": "multiple_choice", "question": "In a food chain, what do we call an animal that hunts and eats other animals? W) producer X) predator Y) prey Z) decomposer", "answer": "X", "answer_text": "Predator" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-chlorophyll", "type": "short_answer", "question": "What is the name of the green substance in leaves that helps a plant make food?", "answer": "Chlorophyll" }
+      ]
+    },
+    {
+      "id": "g5-phys-states",
+      "category": "Physical Science",
+      "subcategory": "States of matter",
+      "subject": "physical_science",
+      "tags": ["grade5", "physical_science", "matter"],
+      "tossup_variants": [
+        { "id": "g5-tu-gas", "type": "multiple_choice", "question": "Which of these is a gas? W) ice X) liquid water Y) steam Z) a rock", "answer": "Y", "answer_text": "Steam" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-freeze", "type": "short_answer", "question": "When liquid water gets very cold and freezes, what solid does it turn into?", "answer": "Ice" }
+      ]
+    },
+    {
+      "id": "g5-phys-magnets",
+      "category": "Physical Science",
+      "subcategory": "Magnets",
+      "subject": "physical_science",
+      "tags": ["grade5", "physical_science", "magnets"],
+      "tossup_variants": [
+        { "id": "g5-tu-iron", "type": "short_answer", "question": "A magnet strongly attracts objects made of which common metal?", "answer": "Iron" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-magnet", "type": "multiple_choice", "question": "Which object would a magnet stick to? W) a plastic spoon X) a steel paperclip Y) a wooden block Z) a glass cup", "answer": "X", "answer_text": "A steel paperclip" }
+      ]
+    },
+    {
+      "id": "g5-phys-forces",
+      "category": "Physical Science",
+      "subcategory": "Forces",
+      "subject": "physical_science",
+      "tags": ["grade5", "physical_science", "forces"],
+      "tossup_variants": [
+        { "id": "g5-tu-gravity", "type": "multiple_choice", "question": "What force pulls objects down toward the ground? W) magnetism X) friction Y) gravity Z) electricity", "answer": "Y", "answer_text": "Gravity" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-friction", "type": "short_answer", "question": "What force slows down a ball as it rolls across the floor and finally stops it?", "answer": "Friction" }
+      ]
+    },
+    {
+      "id": "g5-phys-light",
+      "category": "Physical Science",
+      "subcategory": "Light and energy",
+      "subject": "physical_science",
+      "tags": ["grade5", "physical_science", "energy"],
+      "tossup_variants": [
+        { "id": "g5-tu-sun", "type": "short_answer", "question": "What star is the main source of light and heat for the Earth?", "answer": "The Sun" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-lightsource", "type": "multiple_choice", "question": "Which of these MAKES its own light? W) the Moon X) a mirror Y) a light bulb Z) a window", "answer": "Y", "answer_text": "A light bulb" }
+      ]
+    },
+    {
+      "id": "g5-phys-water",
+      "category": "Physical Science",
+      "subcategory": "Simple chemistry",
+      "subject": "physical_science",
+      "tags": ["grade5", "physical_science", "chemistry"],
+      "tossup_variants": [
+        { "id": "g5-tu-watermade", "type": "multiple_choice", "question": "Water is made of two elements joined together. Which two? W) hydrogen and oxygen X) carbon and oxygen Y) salt and sugar Z) iron and air", "answer": "W", "answer_text": "Hydrogen and oxygen" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-vapor", "type": "short_answer", "question": "What do we call water after it has turned into a gas?", "answer": "Water vapor (accept: steam)" }
+      ]
+    },
+    {
+      "id": "g5-phys-sound",
+      "category": "Physical Science",
+      "subcategory": "Sound and light",
+      "subject": "physical_science",
+      "tags": ["grade5", "physical_science", "waves"],
+      "tossup_variants": [
+        { "id": "g5-tu-soundwater", "type": "short_answer", "question": "True or false: sound can travel through water.", "answer": "True" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-lightfast", "type": "multiple_choice", "question": "Which travels faster? W) light X) sound Y) they are exactly the same Z) neither one moves", "answer": "W", "answer_text": "Light" }
+      ]
+    },
+    {
+      "id": "g5-earth-planets",
+      "category": "Earth and Space",
+      "subcategory": "Solar system",
+      "subject": "earth_space",
+      "tags": ["grade5", "earth_space", "space"],
+      "tossup_variants": [
+        { "id": "g5-tu-mercury", "type": "multiple_choice", "question": "Which planet is closest to the Sun? W) Earth X) Mercury Y) Mars Z) Jupiter", "answer": "X", "answer_text": "Mercury" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-orbit", "type": "short_answer", "question": "What do we call the path that a planet travels around the Sun?", "answer": "Orbit (accept: revolution)" }
+      ]
+    },
+    {
+      "id": "g5-earth-earth",
+      "category": "Earth and Space",
+      "subcategory": "Planet Earth",
+      "subject": "earth_space",
+      "tags": ["grade5", "earth_space", "earth"],
+      "tossup_variants": [
+        { "id": "g5-tu-waterfrac", "type": "multiple_choice", "question": "About how much of the Earth's surface is covered by water? W) about one quarter X) about one half Y) about three quarters Z) almost none", "answer": "Y", "answer_text": "About three quarters" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-core", "type": "short_answer", "question": "What do we call the very center layer of the Earth?", "answer": "The core" }
+      ]
+    },
+    {
+      "id": "g5-earth-watercycle",
+      "category": "Earth and Space",
+      "subcategory": "Water cycle",
+      "subject": "earth_space",
+      "tags": ["grade5", "earth_space", "weather"],
+      "tossup_variants": [
+        { "id": "g5-tu-evaporation", "type": "multiple_choice", "question": "What is it called when water turns into vapor and rises into the air? W) condensation X) precipitation Y) evaporation Z) collection", "answer": "Y", "answer_text": "Evaporation" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-precip", "type": "short_answer", "question": "Rain, snow, sleet, and hail are all examples of what part of the water cycle? (one word for water falling from clouds)", "answer": "Precipitation" }
+      ]
+    },
+    {
+      "id": "g5-earth-weather",
+      "category": "Earth and Space",
+      "subcategory": "Weather",
+      "subject": "earth_space",
+      "tags": ["grade5", "earth_space", "weather"],
+      "tossup_variants": [
+        { "id": "g5-tu-thermometer", "type": "short_answer", "question": "What instrument do we use to measure temperature?", "answer": "Thermometer" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-clouds", "type": "multiple_choice", "question": "What are clouds mostly made of? W) smoke X) tiny water droplets Y) cotton Z) dust", "answer": "X", "answer_text": "Tiny water droplets" }
+      ]
+    },
+    {
+      "id": "g5-earth-moon",
+      "category": "Earth and Space",
+      "subcategory": "The Moon",
+      "subject": "earth_space",
+      "tags": ["grade5", "earth_space", "moon"],
+      "tossup_variants": [
+        { "id": "g5-tu-satellite", "type": "short_answer", "question": "What is the name of Earth's only natural satellite?", "answer": "The Moon" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-crescent", "type": "multiple_choice", "question": "What do we call the Moon when it looks like a thin curved sliver? W) full moon X) new moon Y) crescent moon Z) half moon", "answer": "Y", "answer_text": "Crescent moon" }
+      ]
+    },
+    {
+      "id": "g5-earth-rocks",
+      "category": "Earth and Space",
+      "subcategory": "Rocks and resources",
+      "subject": "earth_space",
+      "tags": ["grade5", "earth_space", "geology"],
+      "tossup_variants": [
+        { "id": "g5-tu-fossilfuel", "type": "multiple_choice", "question": "Which of these is a fossil fuel that we burn for energy? W) wood X) coal Y) water Z) wind", "answer": "X", "answer_text": "Coal" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-lava", "type": "short_answer", "question": "What word describes hot, melted rock AFTER it has erupted out of a volcano onto the surface?", "answer": "Lava" }
+      ]
+    },
+    {
+      "id": "g5-math-multiply",
+      "category": "Math",
+      "subcategory": "Arithmetic",
+      "subject": "math",
+      "tags": ["grade5", "math", "arithmetic"],
+      "tossup_variants": [
+        { "id": "g5-tu-7x8", "type": "short_answer", "question": "What is 7 multiplied by 8?", "answer": "56" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-144div12", "type": "short_answer", "question": "What is 144 divided by 12?", "answer": "12" }
+      ]
+    },
+    {
+      "id": "g5-math-fractions",
+      "category": "Math",
+      "subcategory": "Fractions",
+      "subject": "math",
+      "tags": ["grade5", "math", "fractions"],
+      "tossup_variants": [
+        { "id": "g5-tu-biggest-frac", "type": "multiple_choice", "question": "Which of these fractions is the LARGEST? W) one half X) one quarter Y) one third Z) one eighth", "answer": "W", "answer_text": "One half" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-addfrac", "type": "short_answer", "question": "What is one half plus one quarter? Give your answer as a fraction.", "answer": "3/4 (accept: three quarters)" }
+      ]
+    },
+    {
+      "id": "g5-math-geometry",
+      "category": "Math",
+      "subcategory": "Geometry",
+      "subject": "math",
+      "tags": ["grade5", "math", "geometry"],
+      "tossup_variants": [
+        { "id": "g5-tu-hexagon", "type": "short_answer", "question": "How many sides does a hexagon have?", "answer": "6 (accept: six)" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-equilateral", "type": "multiple_choice", "question": "What do we call a triangle that has all three sides the same length? W) right triangle X) scalene triangle Y) equilateral triangle Z) isosceles triangle", "answer": "Y", "answer_text": "Equilateral triangle" }
+      ]
+    },
+    {
+      "id": "g5-math-measure",
+      "category": "Math",
+      "subcategory": "Measurement",
+      "subject": "math",
+      "tags": ["grade5", "math", "measurement"],
+      "tossup_variants": [
+        { "id": "g5-tu-minutes", "type": "short_answer", "question": "How many minutes are there in 2 hours?", "answer": "120" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-area", "type": "short_answer", "question": "A rectangle is 5 centimeters long and 4 centimeters wide. What is its area in square centimeters?", "answer": "20 (accept: 20 square centimeters)" }
+      ]
+    },
+    {
+      "id": "g5-math-patterns",
+      "category": "Math",
+      "subcategory": "Patterns and place value",
+      "subject": "math",
+      "tags": ["grade5", "math", "number-sense"],
+      "tossup_variants": [
+        { "id": "g5-tu-pattern", "type": "multiple_choice", "question": "What number comes next in this pattern: 2, 4, 6, 8, __ ? W) 9 X) 10 Y) 12 Z) 16", "answer": "X", "answer_text": "10" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-placevalue", "type": "short_answer", "question": "In the number 4,725, what is the value of the digit 7?", "answer": "700 (accept: seven hundred)" }
+      ]
+    },
+    {
+      "id": "g5-math-rounding",
+      "category": "Math",
+      "subcategory": "Rounding and money",
+      "subject": "math",
+      "tags": ["grade5", "math", "number-sense"],
+      "tossup_variants": [
+        { "id": "g5-tu-round", "type": "short_answer", "question": "Round the number 48 to the nearest ten.", "answer": "50" }
+      ],
+      "bonus_variants": [
+        { "id": "g5-bo-money", "type": "short_answer", "question": "If one pencil costs 25 cents, how many pencils can you buy with one dollar?", "answer": "4 (accept: four)" }
+      ]
+    }
+  ]
+}

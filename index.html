@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Science Bowl — Biology Practice</title>
+  <title>Science Bowl — NSB Practice</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -13,7 +13,7 @@
       <header class="setup-header">
         <button id="setup-dashboard-btn" class="ghost dashboard-button" type="button">📊 View Progress Dashboard</button>
         <h1>National Science Bowl</h1>
-        <h2>Biology Practice — Campbell Ch. 1–2</h2>
+        <h2>NSB Practice — Biology, Physics/Chemistry, Math, and Earth/Space</h2>
       </header>
 
       <div class="mode-selector">
@@ -50,7 +50,19 @@
           Your name
           <input type="text" id="solo-name" value="Player" maxlength="20" />
         </label>
+        <label class="mock-row" id="solo-defer-row">
+          <input type="checkbox" id="solo-defer-review" />
+          <span>
+            <strong>🔒 Guided review mode</strong>
+            <small>Hides answers, score, and right/wrong during the quiz. Your child completes the whole test first; then you review every question together at the end. Great for a coaching session.</small>
+          </span>
+        </label>
         <p class="hint">Press <kbd>Space</kbd> when ready to answer · <kbd>Enter</kbd> to submit a typed answer</p>
+        <div class="weak-topics-row">
+          <button id="solo-weak-btn" class="primary small" type="button">🎯 Practice my weak topics</button>
+          <small>Builds a short quiz from the topics you've missed before — with fresh re-phrasings — and re-scores them so you can see improvement over time.</small>
+        </div>
+        <div id="solo-weak-status" class="support-line"></div>
       </div>
 
       <!-- Match options (shared) -->
@@ -61,7 +73,8 @@
             <span>Question pool</span>
             <select id="match-source">
               <option value="all" selected>All available (seed + external corpus)</option>
-              <option value="seed">Seed only (25 hand-curated)</option>
+              <option value="grade5">⭐ Grade 5 — elementary intro</option>
+              <option value="seed">Seed only (48 hand-curated)</option>
               <option value="corpus">External corpus only (real + imported)</option>
             </select>
             <small id="match-source-info">~133 concepts available</small>
@@ -76,12 +89,13 @@
             </select>
           </label>
           <label class="field">
-            <span>Topic filter</span>
+            <span>NSB TOPIC</span>
             <select id="match-topic">
-              <option value="all" selected>All topics</option>
-              <option value="ch1">Campbell Ch 1 only (themes, evolution, inquiry)</option>
-              <option value="ch2">Campbell Ch 2 only (atoms, bonding)</option>
-              <option value="doe-corpus">DOE corpus only</option>
+              <option value="biology">Biology</option>
+              <option value="physics_chemistry">Physics/Chemistry</option>
+              <option value="math">Math</option>
+              <option value="earth_space">Earth/Space Science</option>
+              <option value="all" selected>All of the above</option>
             </select>
           </label>
           <label class="field">
@@ -90,14 +104,6 @@
               <option value="all" selected>All years</option>
             </select>
             <small id="match-year-info">Pulled from <a href="https://science.osti.gov/wdts/nsb/Regional-Competitions/Resources/MS-Sample-Questions" target="_blank" rel="noreferrer noopener">DOE NSB MS sample bank</a>.</small>
-          </label>
-          <label class="field">
-            <span>Subject filter (external corpus)</span>
-            <select id="match-subject">
-              <option value="all" selected>All subjects</option>
-              <option value="biology">Biology</option>
-              <option value="physical_science">Physical Science</option>
-            </select>
           </label>
         </div>
       </div>
@@ -115,6 +121,15 @@
         </label>
         <div id="agent-support" class="support-line"></div>
 
+        <label class="toggle">
+          <input type="checkbox" id="agent-review-gate" checked />
+          <span class="toggle-slider"></span>
+          <span class="toggle-label">
+            <strong>Moderator reviews answers before scoring</strong>
+            <small>After the agent hears a spoken answer, pause so you can reword or fix the transcription and decide. Nothing is judged or scored until you press Judge or mark it yourself.</small>
+          </span>
+        </label>
+
         <div id="agent-voice-controls" class="voice-controls hidden">
           <div class="voice-grid">
             <label class="field">
@@ -131,7 +146,9 @@
           <div class="voice-actions">
             <button id="agent-test-btn" class="ghost small" type="button">🔊 Test voice</button>
             <button id="agent-test-mc-btn" class="ghost small" type="button">🔊 Test multiple-choice cadence</button>
+            <button id="agent-test-mic-btn" class="ghost small" type="button">🎤 Test microphone</button>
           </div>
+          <div id="agent-mic-result" class="support-line"></div>
         </div>
       </div>
 
@@ -224,15 +241,15 @@
       <div class="format-note">
         <h3>NSB Format (per <a href="RULES.md">RULES.md</a>)</h3>
         <ul>
-          <li><strong>Toss-up</strong> (4 pts): Either team buzzes. 5-second window after the question is read. No team consult on toss-ups (verbal/audible only — NSB allows non-verbal). Wrong answer → opposing team gets 5 sec, no penalty.</li>
+          <li><strong>Toss-up</strong> (4 pts): Either team buzzes. In this setup, the moderator waits for the external buzz app and then presses A or L. No team consult on toss-ups (verbal/audible only — NSB allows non-verbal). Wrong answer → opposing team gets a free shot.</li>
           <li><strong>Bonus</strong> (10 pts): Only the toss-up winner plays. 20 seconds. Team consult allowed. Captain answers (per Rule 3-9 — not strictly enforced in this app).</li>
-          <li><strong>Interrupt penalty:</strong> +4 to opponent if a player buzzes mid-read and answers wrong. <em>(Not yet implemented — see RULES.md §12.)</em></li>
+          <li><strong>Interrupt penalty:</strong> if a team buzzes before the toss-up is fully read and misses, the toss-up is re-read in full for the opposing team, who then answer it for the 4 points (awarded only if they answer correctly).</li>
         </ul>
       </div>
     </section>
 
     <!-- ============ Two-Team Game Screen ============ -->
-    <section id="game-two-team" class="screen">
+    <section id="game-two-team" class="screen projector-clean">
       <header class="scoreboard">
         <div class="team team1">
           <div class="team-name" id="t1-name">Team 1</div>
@@ -243,6 +260,8 @@
           <div class="round-num" id="round-num">Round 1</div>
           <div class="category" id="category">—</div>
           <div class="phase-label" id="phase-label">Toss-up</div>
+          <div class="round-state" id="round-state">Moderator ready</div>
+          <div class="turn-indicator" id="turn-indicator">Waiting to begin the toss-up</div>
         </div>
         <div class="team team2">
           <div class="team-name" id="t2-name">Team 2</div>
@@ -252,6 +271,7 @@
       </header>
 
       <main class="play-area">
+        <div class="interrupt-banner hidden" id="interrupt-banner"></div>
         <div class="timer-bar">
           <div class="timer-fill" id="timer-fill"></div>
           <div class="timer-text" id="timer-text">—</div>
@@ -264,6 +284,10 @@
             <div class="response-label" id="tt-response-label">Team said</div>
             <div class="response-text" id="tt-response-text"></div>
           </div>
+          <div class="answer-review hidden" id="tt-answer-review">
+            <label class="answer-review-label" for="tt-answer-input">Heard — reword or fix before judging</label>
+            <input type="text" id="tt-answer-input" autocomplete="off" placeholder="Type or correct the team's answer…" />
+          </div>
           <div class="answer-reveal hidden" id="answer-reveal"></div>
           <div class="explanation-panel hidden" id="tt-explanation-panel">
             <div class="explanation-label">💡 Why</div>
@@ -273,15 +297,20 @@
           <button id="ptt-btn-tt" class="ptt-btn hidden" type="button">🎙 Hold to answer</button>
         </div>
 
-        <div class="controls">
-          <button id="read-btn" class="primary">Read Question</button>
-          <button id="correct-btn" class="success hidden">Correct</button>
-          <button id="incorrect-btn" class="danger hidden">Incorrect</button>
-          <button id="reveal-btn" class="ghost hidden">Reveal Answer</button>
-          <button id="next-btn" class="primary hidden">Next Round →</button>
-        </div>
+        <div class="decision-banner hidden" id="decision-banner"></div>
+        <div class="status-line" id="status-line">Press "Begin Toss-up Reading" to start round 1.</div>
 
-        <div class="status-line" id="status-line">Press "Read Question" to start round 1.</div>
+        <div class="host-console">
+          <div class="controls controls-host" id="two-team-controls">
+            <button id="read-btn" class="primary host-btn">Begin Toss-up Reading (R)</button>
+            <button id="judge-btn" class="primary host-btn hidden">Judge Answer (G)</button>
+            <button id="correct-btn" class="success host-btn hidden">Mark Correct (C)</button>
+            <button id="incorrect-btn" class="danger host-btn hidden">Mark Incorrect (X)</button>
+            <button id="reveal-btn" class="ghost host-btn hidden">Reveal Answer (V)</button>
+            <button id="next-btn" class="primary host-btn hidden">Next Round (N) →</button>
+          </div>
+          <div class="host-shortcuts">Host mode shortcuts: <kbd>R</kbd> primary action, <kbd>G</kbd> judge, <kbd>C</kbd> correct, <kbd>X</kbd> incorrect, <kbd>V</kbd> reveal, <kbd>N</kbd> next, <kbd>A</kbd>/<kbd>L</kbd> buzz</div>
+        </div>
       </main>
 
       <footer class="game-footer">
@@ -333,6 +362,7 @@
           <div class="agent-transcript hidden" id="agent-transcript-solo"></div>
           <button id="ptt-btn-solo" class="ptt-btn hidden" type="button">🎙 Hold to answer</button>
           <div class="answer-input-wrap hidden" id="solo-answer-wrap">
+            <select id="solo-answer-select" class="hidden"></select>
             <input type="text" id="solo-answer-input" placeholder="Type your answer or speak it…" autocomplete="off" />
             <button id="solo-submit-btn" class="primary">Submit</button>
           </div>
@@ -503,6 +533,12 @@
     // we have a real build pipeline.
     (() => {
       const cb = '?v=' + Date.now();
+      // Config load order: committed llm-config.js (safe default / hosted proxy
+      // settings) first, then llm-config.local.js (gitignored) which, if present,
+      // fully overrides it for local development. Both are optional.
+      const onerr = 'onerror="window.SCIENCE_BOWL_CONFIG = window.SCIENCE_BOWL_CONFIG || {}"';
+      const optionalConfig = `<script src="llm-config.js${cb}" ${onerr}><\/script>`
+        + `<script src="llm-config.local.js${cb}" ${onerr}><\/script>`;
       const core = [
         'agent.js', 'llm-judge.js', 'mock-api.js', 'llm-generator.js',
         'progress.js', 'dashboard.js', 'app.js',
@@ -518,7 +554,7 @@
         'tests/bank-lint.test.js',
       ] : [];
       const all = [...core, ...testFiles];
-      document.write(all.map((s) => `<script src="${s}${cb}"><\/script>`).join(''));
+      document.write([optionalConfig, ...all.map((s) => `<script src="${s}${cb}"><\/script>`)].join(''));
     })();
   </script>
 </body>

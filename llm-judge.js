@@ -17,15 +17,84 @@
   const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
   const GOOGLE_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
   const ANTHROPIC_VERSION = '2023-06-01';
+  const API_TIMEOUT_MS = 20000;
+
+  // fetch() with a hard timeout. Without this, a flaky provider/network call
+  // never settles — the judge/explanation promise hangs forever, freezing the
+  // verdict or explanation panel mid-round.
+  async function fetchWithTimeout(url, options, ms = API_TIMEOUT_MS) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    try {
+      return await fetch(url, { ...options, signal: ctrl.signal });
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw new Error(`API request timed out after ${Math.round(ms / 1000)}s`);
+      throw e;
+    } finally {
+      clearTimeout(t);
+    }
+  }
 
   const MODELS = {
     'gemini-flash': { id: 'gemini-2.5-flash',         provider: 'google',    label: 'Gemini 2.5 Flash (free tier!)', costIn: 0.075, costOut: 0.30 },
     'gemini-pro':   { id: 'gemini-2.5-pro',           provider: 'google',    label: 'Gemini 2.5 Pro (more reasoning)', costIn: 1.25, costOut: 5.00 },
     'haiku':       { id: 'claude-haiku-4-5-20251001', provider: 'anthropic', label: 'Claude Haiku 4.5 (fast, cheap)', costIn: 1.0, costOut: 5.0 },
     'sonnet':      { id: 'claude-sonnet-4-6',         provider: 'anthropic', label: 'Claude Sonnet 4.6 (more accurate)', costIn: 3.0, costOut: 15.0 },
-    'opus':        { id: 'claude-opus-4-7',           provider: 'anthropic', label: 'Claude Opus 4.7 (best, slowest)', costIn: 15.0, costOut: 75.0 },
+    'opus':        { id: 'claude-opus-4-8',           provider: 'anthropic', label: 'Claude Opus 4.8 (best, slowest)', costIn: 5.0, costOut: 25.0, noSampling: true },
     'gpt-4o-mini': { id: 'gpt-4o-mini',               provider: 'openai',    label: 'GPT-4o mini (cheapest)', costIn: 0.15, costOut: 0.60 },
     'gpt-4o':      { id: 'gpt-4o',                    provider: 'openai',    label: 'GPT-4o', costIn: 2.50, costOut: 10.00 },
+  };
+
+  // ---------------- Daily spend guard ----------------
+  // Hard cap on LLM spend across ALL providers in a rolling 24h window.
+  // Defaults to $2; override via window.SCIENCE_BOWL_CONFIG.llm.dailyBudgetUsd.
+  // Spend is tracked in localStorage as [timestampMs, costUsd] entries.
+  const SPEND_KEY = 'science-bowl-llm-spend';
+  const DEFAULT_DAILY_BUDGET_USD = 2.0;
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  function dailyBudgetUsd() {
+    const cfg = (typeof window !== 'undefined' && window.SCIENCE_BOWL_CONFIG && window.SCIENCE_BOWL_CONFIG.llm) || {};
+    const v = Number(cfg.dailyBudgetUsd);
+    return Number.isFinite(v) && v > 0 ? v : DEFAULT_DAILY_BUDGET_USD;
+  }
+
+  const Budget = {
+    _load() {
+      try { const r = JSON.parse(localStorage.getItem(SPEND_KEY)); return Array.isArray(r) ? r : []; }
+      catch (_) { return []; }
+    },
+    _recent() {
+      const cutoff = Date.now() - DAY_MS;
+      return this._load().filter((e) => Array.isArray(e) && e[0] >= cutoff);
+    },
+    spent24h() {
+      return this._recent().reduce((sum, e) => sum + (Number(e[1]) || 0), 0);
+    },
+    remaining() { return Math.max(0, dailyBudgetUsd() - this.spent24h()); },
+    record(costUsd) {
+      const c = Number(costUsd);
+      if (!Number.isFinite(c) || c <= 0) return;
+      const list = this._recent();
+      list.push([Date.now(), c]);
+      try { localStorage.setItem(SPEND_KEY, JSON.stringify(list)); } catch (_) {}
+    },
+    recordFromUsage(modelKey, usage) {
+      const m = MODELS[modelKey];
+      if (!m || !usage) return;
+      const cost = ((Number(usage.input_tokens) || 0) / 1e6) * m.costIn
+                 + ((Number(usage.output_tokens) || 0) / 1e6) * m.costOut;
+      this.record(cost);
+    },
+    assertUnderLimit() {
+      const limit = dailyBudgetUsd();
+      const spent = this.spent24h();
+      if (spent >= limit) {
+        const err = new Error(`Daily LLM spend cap reached ($${spent.toFixed(2)} of $${limit.toFixed(2)} in the last 24h). Falling back to the free rule-based judge until it resets.`);
+        err.code = 'BUDGET_EXCEEDED';
+        throw err;
+      }
+    },
   };
 
   // Guardrail-laden system prompt. Padded to be cacheable (>1024 tokens for Haiku/Sonnet).
@@ -204,21 +273,38 @@ Now judge the student answer below using these rules. Return ONLY the JSON objec
     loadConfig() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
-        const c = JSON.parse(raw);
-        this.enabled = !!c.enabled;
-        this.model = c.model || 'haiku';
-        // New shape: per-provider keys.
-        this.anthropicKey = c.anthropicKey || '';
-        this.openaiKey = c.openaiKey || '';
-        this.googleKey = c.googleKey || '';
-        // Backward-compat: migrate legacy single `apiKey` into anthropicKey
-        // since the prior version was Anthropic-only.
-        if (!this.anthropicKey && c.apiKey) {
-          this.anthropicKey = c.apiKey;
+        if (raw) {
+          const c = JSON.parse(raw);
+          this.enabled = !!c.enabled;
+          this.model = c.model || 'haiku';
+          // New shape: per-provider keys.
+          this.anthropicKey = c.anthropicKey || '';
+          this.openaiKey = c.openaiKey || '';
+          this.googleKey = c.googleKey || '';
+          // Backward-compat: migrate legacy single `apiKey` into anthropicKey
+          // since the prior version was Anthropic-only.
+          if (!this.anthropicKey && c.apiKey) {
+            this.anthropicKey = c.apiKey;
+          }
         }
-        // Validate the loaded model still exists; fall back to haiku.
-        if (!MODELS[this.model]) this.model = 'haiku';
+      } catch (_) {}
+
+      this.loadRuntimeConfig();
+
+      // Validate the loaded model still exists; fall back to haiku.
+      if (!MODELS[this.model]) this.model = 'haiku';
+    },
+
+    loadRuntimeConfig() {
+      try {
+        const cfg = (window && window.SCIENCE_BOWL_CONFIG && window.SCIENCE_BOWL_CONFIG.llm) || null;
+        if (!cfg) return;
+        if (typeof cfg.enabled === 'boolean') this.enabled = cfg.enabled;
+        if (typeof cfg.model === 'string' && MODELS[cfg.model]) this.model = cfg.model;
+        const keys = cfg.providerKeys || {};
+        if (keys.anthropic) this.anthropicKey = sanitizeKey(keys.anthropic);
+        if (keys.openai) this.openaiKey = sanitizeKey(keys.openai);
+        if (keys.google) this.googleKey = sanitizeKey(keys.google);
       } catch (_) {}
     },
 
@@ -252,8 +338,28 @@ Now judge the student answer below using these rules. Return ONLY the JSON objec
     },
 
     isReady() {
-      // Ready only when the *selected* model's provider has a key set.
-      return this.enabled && !!this._keyForCurrentProvider();
+      // Ready when within the daily cap AND we can reach a model: either a local
+      // provider key is set, OR a server-side proxy is configured (hosted mode,
+      // where the key lives on the Worker, not in the browser).
+      const cfg = (typeof window !== 'undefined' && window.SCIENCE_BOWL_CONFIG && window.SCIENCE_BOWL_CONFIG.llm) || {};
+      const reachable = !!cfg.proxyUrl || !!this._keyForCurrentProvider();
+      return this.enabled && reachable && !this.overBudget();
+    },
+
+    /** True once the rolling 24h LLM spend has hit the daily cap. */
+    overBudget() {
+      return Budget.spent24h() >= dailyBudgetUsd();
+    },
+
+    /** { spent, limit, remaining } in USD for the rolling 24h window. */
+    budgetStatus() {
+      return { spent: Budget.spent24h(), limit: dailyBudgetUsd(), remaining: Budget.remaining() };
+    },
+
+    /** User-facing notice when the cap is hit. */
+    budgetNotice() {
+      const s = this.budgetStatus();
+      return `Daily LLM spend cap of $${s.limit.toFixed(2)} reached (~$${s.spent.toFixed(2)} in the last 24h). Judging and explanations use the free rule-based fallback until older spend ages out of the window.`;
     },
 
     listModels() {
@@ -461,8 +567,36 @@ STRICT RULES:
     async _callApi(messages, maxTokens, systemOverride) {
       const m = MODELS[this.model];
       if (!m) throw new Error('unknown model: ' + this.model);
+      // Hard backstop: block the call outright once the daily cap is hit, so
+      // no provider key can be charged beyond the budget (covers judge, explain,
+      // and the question generator — all route through here).
+      Budget.assertUnderLimit();
 
       const sysText = systemOverride || SYSTEM_PROMPT;
+
+      // Proxy mode (hosted): route every call through the server-side Worker,
+      // which holds the API key. Keeps keys out of the browser on a public URL.
+      // The Worker returns an Anthropic-shaped { content, usage } for all providers.
+      const cfg = (typeof window !== 'undefined' && window.SCIENCE_BOWL_CONFIG && window.SCIENCE_BOWL_CONFIG.llm) || {};
+      if (cfg.proxyUrl) {
+        const userText = messages.map((msg) => (typeof msg.content === 'string' ? msg.content : '')).join('\n');
+        const wantsJson = /Return ONLY the JSON object\./i.test(userText);
+        const headers = { 'Content-Type': 'application/json' };
+        if (cfg.proxyToken) headers['X-App-Token'] = cfg.proxyToken;
+        const res = await fetchWithTimeout(cfg.proxyUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ model: m.id, maxTokens: maxTokens || 300, system: sysText, messages, noSampling: !!m.noSampling, wantsJson }),
+        });
+        if (!res.ok) {
+          let detail;
+          try { detail = (await res.json()).error; } catch (_) { detail = res.statusText; }
+          throw new Error(`API ${res.status}: ${detail}`);
+        }
+        const out = await res.json();
+        Budget.recordFromUsage(this.model, out.usage);
+        return out;
+      }
 
       if (m.provider === 'openai') {
         // OpenAI Chat Completions. Convert Anthropic-shaped system prompt
@@ -474,7 +608,7 @@ STRICT RULES:
           max_tokens: maxTokens || 300,
           messages: [{ role: 'system', content: sysText }, ...messages],
         };
-        const res = await fetch(OPENAI_API_URL, {
+        const res = await fetchWithTimeout(OPENAI_API_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -493,13 +627,9 @@ STRICT RULES:
         const choice = (json.choices && json.choices[0]) || {};
         const content = (choice.message && choice.message.content) || '';
         const usage = json.usage || {};
-        return {
-          content: [{ type: 'text', text: content }],
-          usage: {
-            input_tokens: usage.prompt_tokens,
-            output_tokens: usage.completion_tokens,
-          },
-        };
+        const normUsage = { input_tokens: usage.prompt_tokens, output_tokens: usage.completion_tokens };
+        Budget.recordFromUsage(this.model, normUsage);
+        return { content: [{ type: 'text', text: content }], usage: normUsage };
       }
 
       if (m.provider === 'google') {
@@ -524,11 +654,17 @@ STRICT RULES:
           generationConfig: {
             temperature: 0,
             maxOutputTokens: maxTokens || 300,
+            // Gemini 2.5 spends part of maxOutputTokens on internal "thinking"
+            // tokens, which was truncating our short judge/explain outputs.
+            // Disable thinking on Flash (supports budget 0) — these structured
+            // tasks don't need it. (Pro can't disable thinking; it has more
+            // headroom and is rarely used for this.)
+            ...(/flash/i.test(m.id) ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
             ...(wantsJson ? { responseMimeType: 'application/json' } : {}),
           },
         };
         const url = `${GOOGLE_API_BASE}/${encodeURIComponent(m.id)}:generateContent?key=${encodeURIComponent(this.googleKey)}`;
-        const res = await fetch(url, {
+        const res = await fetchWithTimeout(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
@@ -544,13 +680,9 @@ STRICT RULES:
         const parts = (cand.content && cand.content.parts) || [];
         const text = parts.map((p) => p.text || '').join('');
         const usage = json.usageMetadata || {};
-        return {
-          content: [{ type: 'text', text }],
-          usage: {
-            input_tokens: usage.promptTokenCount,
-            output_tokens: usage.candidatesTokenCount,
-          },
-        };
+        const normUsage = { input_tokens: usage.promptTokenCount, output_tokens: usage.candidatesTokenCount };
+        Budget.recordFromUsage(this.model, normUsage);
+        return { content: [{ type: 'text', text }], usage: normUsage };
       }
 
       // Anthropic (default).
@@ -558,7 +690,10 @@ STRICT RULES:
       const body = {
         model: m.id,
         max_tokens: maxTokens || 300,
-        temperature: 0,
+        // Opus 4.7+ (flagged noSampling) reject sampling params like temperature
+        // with a 400. Only send temperature for models that still accept it;
+        // for the others, the system prompt already enforces deterministic judging.
+        ...(m.noSampling ? {} : { temperature: 0 }),
         system: [
           {
             type: 'text',
@@ -569,7 +704,7 @@ STRICT RULES:
         messages,
       };
 
-      const res = await fetch(ANTHROPIC_API_URL, {
+      const res = await fetchWithTimeout(ANTHROPIC_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -586,7 +721,9 @@ STRICT RULES:
         throw new Error(`API ${res.status}: ${detail}`);
       }
 
-      return await res.json();
+      const json = await res.json();
+      Budget.recordFromUsage(this.model, json.usage);
+      return json;
     },
 
     _parseResponse(apiResponse) {

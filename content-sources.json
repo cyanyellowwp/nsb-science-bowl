@@ -6,6 +6,12 @@
       "label": "DOE NSB corpus",
       "path": "corpus-doe.json",
       "enabled": true
+    },
+    {
+      "id": "grade5",
+      "label": "Grade 5 — elementary intro",
+      "path": "corpus-grade5.json",
+      "enabled": true
     }
   ]
 }
