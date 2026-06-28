@@ -1,0 +1,7 @@
+{
+  "name": "nsb-api",
+  "version": "1.0.0",
+  "description": "LLM proxy for the Science Bowl app — Azure Static Web Apps managed function. No dependencies (uses Node 18+ global fetch).",
+  "main": "llm/index.js",
+  "engines": { "node": ">=18" }
+}

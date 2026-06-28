@@ -1,90 +1,92 @@
-# Deploying the Science Bowl app (Cloudflare Pages + LLM proxy Worker)
+# Deploying the Science Bowl app (Azure Static Web Apps + LLM proxy)
 
-The app is a **static site** — no build step. These steps host it at a URL your
-kids open on their own laptops, with the Anthropic key kept server-side on a
-Cloudflare Worker (never shipped to the browser).
+The app is a **static site** — no build step. Azure Static Web Apps (SWA) hosts
+it at a URL your kids open on their own laptops, and its built-in **managed
+function** (`/api/llm`) acts as the LLM proxy, holding the Anthropic key
+server-side so it never reaches the browser. Both run on the SWA **Free** plan.
 
-Division of labor: the code is all in this repo. You run the Cloudflare-account
-steps (login, secrets, connect repo) — those need your account.
+Division of labor: all the code is in this repo. You run the Azure-portal steps
+(create the SWA, set the key) — those need your account.
 
-Prerequisites
-- A free Cloudflare account.
-- This repo pushed to GitHub (`cyanyellowwp/quiz-practice`).
-- `npm i -g wrangler` (Cloudflare CLI) for the Worker.
+Layout the deploy uses:
+- App (static): `science-bowl-quiz/`
+- API (managed function): `science-bowl-quiz/api/`  → served at `/api/llm`
 
 ---
 
-## Part A — Host the static site (Cloudflare Pages)  ·  free
+## Part A — Create the Static Web App  ·  free
 
-1. Push the repo to GitHub (the app lives in `science-bowl-quiz/`).
-2. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git**.
-3. Pick `cyanyellowwp/quiz-practice`. Build settings:
-   - **Framework preset:** None
-   - **Build command:** *(leave empty)*
-   - **Build output directory:** `science-bowl-quiz`
-4. Deploy. You'll get a URL like `https://nsb-quiz.pages.dev`.
+1. Push the repo to GitHub (already done).
+2. Azure Portal → **Create resource → Static Web App**.
+   - Plan: **Free**
+   - Deployment source: **GitHub** → repo `cyanyellowwp/quiz-practice`, branch `main`
+   - Build preset: **Custom**
+   - **App location:** `science-bowl-quiz`
+   - **Api location:** `science-bowl-quiz/api`
+   - **Output location:** *(leave blank)*
+3. Create. Azure adds a GitHub Actions workflow and deploys. You get a URL like
+   `https://<name>.azurestaticapps.net`.
+4. Confirm the generated workflow has `app_location: "science-bowl-quiz"` and
+   `api_location: "science-bowl-quiz/api"`.
 
 At this point the app works with the **free rule-based judge** (no key, no cost).
-That alone is a fine setup for kids using guided-review mode. To add Claude's
-semantic grading + explanations, do Part B.
+That's already fine for kids in guided-review mode. To add Claude's semantic
+grading + explanations, do Part B.
 
 ---
 
-## Part B — LLM proxy Worker (keeps your key off the kids' laptops)  ·  free tier
+## Part B — Turn on the LLM proxy  ·  free tier
 
-From the `science-bowl-quiz/worker/` folder:
-
-1. `wrangler login`
-2. Set the key(s) as secrets (never committed):
-   ```
-   wrangler secret put ANTHROPIC_API_KEY      # paste your sk-ant-... key
-   # wrangler secret put GOOGLE_API_KEY        # only if you use Gemini
-   ```
-3. Edit `wrangler.toml` → set `ALLOWED_ORIGIN` to your Pages URL from Part A
-   (e.g. `https://nsb-quiz.pages.dev`). This locks the proxy to your site.
-4. `wrangler deploy` → you'll get a Worker URL like
-   `https://nsb-llm-proxy.<your-subdomain>.workers.dev`.
-
-Then point the app at it:
-
-5. Edit `llm-config.js` (committed, safe — no key) and uncomment/set:
+1. Azure Portal → your Static Web App → **Configuration → Application settings**
+   → add:
+   - `ANTHROPIC_API_KEY` = your `sk-ant-…` key
+   - *(optional)* `GOOGLE_API_KEY` if you use Gemini
+   - *(optional)* `APP_TOKEN` = any random string (a shared gate)
+   Save. These are server-side only — never in the repo.
+2. Edit `llm-config.js` (committed, safe — no key) and uncomment:
    ```js
-   proxyUrl: 'https://nsb-llm-proxy.<your-subdomain>.workers.dev',
+   proxyUrl: '/api/llm',
+   // proxyToken: 'the-same-APP_TOKEN-if-you-set-one',
    ```
-6. Commit + push → Cloudflare Pages auto-redeploys. The hosted app now sends LLM
-   calls to the Worker, which injects the key.
+3. Commit + push → SWA auto-redeploys. The app now sends LLM calls to
+   `/api/llm`, which injects the key. Nothing secret ships to the browser.
 
-> The committed `llm-config.js` contains **no secret** — just the Worker URL. The
-> key lives only in the Worker secret and your local `llm-config.local.js`.
+> The function is **same-origin** (`/api/llm`), so there's no CORS or separate
+> URL to manage.
 
 ---
 
-## Part C — Lock it to your family (recommended)  ·  free
+## Part C — Lock it to your family (recommended)
 
-The proxy spends your API credits, so gate who can load the app:
+The proxy spends your API credits, so gate who can use it. Two layers:
 
-- Cloudflare dashboard → **Zero Trust → Access → Applications → Add → Self-hosted**.
-- Point it at the Pages domain; policy = **Allow** the specific emails (you + kids).
-- Now only those emails can open the app at all.
-
-Backstops (do at least one):
-- The Worker is already locked to `ALLOWED_ORIGIN` and clamps output tokens.
-- Set a **monthly spend limit** in the Anthropic Console — the real hard cap.
-- Optional extra gate: `wrangler secret put APP_TOKEN`, then set a matching
-  `proxyToken` in `llm-config.js`.
+1. **SWA auth** (free): require login for the whole app. Add this route rule to
+   `staticwebapp.config.json` and invite your family's accounts in the portal
+   (Static Web App → Role management → Invite):
+   ```json
+   "routes": [
+     { "route": "/api/*", "allowedRoles": ["authenticated"] },
+     { "route": "/*",     "allowedRoles": ["authenticated"] }
+   ]
+   ```
+   (Ask me to add this — I left it out by default so the site stays open until
+   you decide.)
+2. **Backstops:** the function clamps output tokens, the app enforces the
+   `dailyBudgetUsd` cap, and — most important — set a **monthly spend limit in
+   the Anthropic Console** as the real hard ceiling. Optionally also set
+   `APP_TOKEN` (step B1) + `proxyToken` (step B2).
 
 ---
 
 ## Cost summary
-- Pages hosting: **$0** (free tier).
-- Worker: **$0** (free tier, 100k requests/day).
-- LLM usage: pennies, only when the judge/explanations run; capped client-side
-  (`dailyBudgetUsd`) and by your provider's monthly limit.
+- SWA hosting + managed function: **$0** (Free plan).
+- LLM usage: pennies, only when judge/explanations run; capped client-side and
+  by your provider's monthly limit.
 
 ## Updating later
-Push to GitHub → Pages redeploys the site automatically. Re-run `wrangler deploy`
-from `worker/` only when the Worker code changes.
+Push to `main` → SWA redeploys the site **and** the function automatically.
 
 ## Local development is unchanged
 `llm-config.local.js` (gitignored) still loads last and overrides everything, so
-locally you keep using your direct key with `python3 -m http.server 3000`.
+locally you keep using your direct key with `python3 -m http.server 3000`. The
+`/api/llm` path only exists once deployed to Azure.

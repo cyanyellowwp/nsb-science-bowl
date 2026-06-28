@@ -1,8 +1,9 @@
 // Committed default config — SAFE TO DEPLOY. Never put an API key in this file.
 //
-// • Hosted mode (Cloudflare Pages): uncomment `proxyUrl` and point it at your
-//   deployed Worker (see DEPLOY.md). All LLM calls then go through the Worker,
-//   which holds the key — nothing secret ships in the public site.
+// • Hosted mode (Azure Static Web Apps): uncomment `proxyUrl` below. The app
+//   then routes LLM calls to the same-origin /api/llm managed function, which
+//   holds the key (set as an Application Setting) — nothing secret ships in the
+//   public site. See DEPLOY.md.
 // • Until proxyUrl is set, the app runs the FREE in-browser rule judge (no key,
 //   no cost) — a safe default for a public URL.
 // • Local dev: llm-config.local.js (gitignored) loads AFTER this file and fully
@@ -12,8 +13,8 @@ window.SCIENCE_BOWL_CONFIG = {
   llm: {
     enabled: true,
     model: 'haiku',
-    // proxyUrl: 'https://nsb-llm-proxy.<your-subdomain>.workers.dev',
-    // proxyToken: '',   // only if the Worker sets an APP_TOKEN secret
+    // proxyUrl: '/api/llm',   // Azure Static Web Apps managed function (same-origin)
+    // proxyToken: '',         // only if the function sets an APP_TOKEN app setting
     dailyBudgetUsd: 2.0,
     providerKeys: { anthropic: '', openai: '', google: '' },
   },
