@@ -9,8 +9,8 @@ Division of labor: all the code is in this repo. You run the Azure-portal steps
 (create the SWA, set the key) — those need your account.
 
 Layout the deploy uses:
-- App (static): `science-bowl-quiz/`
-- API (managed function): `science-bowl-quiz/api/`  → served at `/api/llm`
+- App (static): repo root `/`
+- API (managed function): `api/`  → served at `/api/llm`
 
 ---
 
@@ -19,15 +19,15 @@ Layout the deploy uses:
 1. Push the repo to GitHub (already done).
 2. Azure Portal → **Create resource → Static Web App**.
    - Plan: **Free**
-   - Deployment source: **GitHub** → repo `cyanyellowwp/quiz-practice`, branch `main`
+   - Deployment source: **GitHub** → repo `cyanyellowwp/nsb-science-bowl`, branch `main`
    - Build preset: **Custom**
-   - **App location:** `science-bowl-quiz`
-   - **Api location:** `science-bowl-quiz/api`
+   - **App location:** `/`
+   - **Api location:** `api`
    - **Output location:** *(leave blank)*
 3. Create. Azure adds a GitHub Actions workflow and deploys. You get a URL like
    `https://<name>.azurestaticapps.net`.
-4. Confirm the generated workflow has `app_location: "science-bowl-quiz"` and
-   `api_location: "science-bowl-quiz/api"`.
+4. Confirm the generated workflow has `app_location: "/"` and
+   `api_location: "api"`.
 
 At this point the app works with the **free rule-based judge** (no key, no cost).
 That's already fine for kids in guided-review mode. To add Claude's semantic
