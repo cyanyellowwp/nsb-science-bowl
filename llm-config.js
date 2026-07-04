@@ -13,7 +13,7 @@ window.SCIENCE_BOWL_CONFIG = {
   llm: {
     enabled: true,
     model: 'haiku',
-    // proxyUrl: '/api/llm',   // Azure Static Web Apps managed function (same-origin)
+    proxyUrl: '/api/llm',   // Azure Static Web Apps managed function (same-origin)
     // proxyToken: '',         // only if the function sets an APP_TOKEN app setting
     dailyBudgetUsd: 2.0,
     providerKeys: { anthropic: '', openai: '', google: '' },
